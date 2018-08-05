@@ -10,6 +10,7 @@ from torchvision import transforms, utils
 from PIL import Image, ImageOps
 from random import random, randint
 
+
 root_dir = '../ACDC-2D-All'
 batch_size = 4
 num_workers = 4
