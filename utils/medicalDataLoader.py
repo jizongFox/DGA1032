@@ -1,22 +1,19 @@
-#coding=utf8
+# coding=utf8
 from __future__ import print_function, division
-import os
-import torch
-import pandas as pd
-from skimage import io, transform
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-from PIL import Image, ImageOps
-from random import random, randint
 
+import os
+from random import random
+
+from PIL import Image, ImageOps
+from torch.utils.data import Dataset
+from torchvision import transforms
 
 root_dir = '../dataset/ACDC-2D-All'
 batch_size = 4
 num_workers = 4
 
 transform = transforms.Compose([
-    transforms.Resize(128,128),
+    transforms.Resize(128, 128),
     transforms.ToTensor()
 ])
 mask_transform = transforms.Compose([
@@ -33,7 +30,7 @@ def make_dataset(root, mode):
         train_img_path = os.path.join(root, 'train', 'Img')
         train_mask_path = os.path.join(root, 'train', 'GT')
         train_mask_weak_path = os.path.join(root, 'train', 'WeaklyAnnotations')
-        
+
         images = os.listdir(train_img_path)
         labels = os.listdir(train_mask_path)
         labels_weak = os.listdir(train_mask_weak_path)
@@ -41,49 +38,49 @@ def make_dataset(root, mode):
         labels.sort()
         labels_weak.sort()
 
-        for it_im, it_gt, it_w in zip(images, labels,labels_weak):
-            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt), os.path.join(train_mask_weak_path, it_w))
+        for it_im, it_gt, it_w in zip(images, labels, labels_weak):
+            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt),
+                    os.path.join(train_mask_weak_path, it_w))
             items.append(item)
-            
+
     elif mode == 'val':
         train_img_path = os.path.join(root, 'val', 'Img')
         train_mask_path = os.path.join(root, 'val', 'GT')
         train_mask_weak_path = os.path.join(root, 'val', 'WeaklyAnnotations')
-        
+
         images = os.listdir(train_img_path)
         labels = os.listdir(train_mask_path)
         labels_weak = os.listdir(train_mask_weak_path)
-        
+
         ## 去掉第一张 没有ground truth的图像
         # images = [x for x in images if x.split('.')[0].split('_')[2]!='1' ]
         # labels = [x for x in labels if x.split('.')[0].split('_')[2]!='1']
         # labels_weak = [x for x in labels_weak if x.split('.')[0].split('_')[2]!='1']
 
-
         images.sort()
         labels.sort()
         labels_weak.sort()
 
-
-         
-        for it_im, it_gt, it_w in zip(images, labels,labels_weak):
-            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt), os.path.join(train_mask_weak_path, it_w))
+        for it_im, it_gt, it_w in zip(images, labels, labels_weak):
+            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt),
+                    os.path.join(train_mask_weak_path, it_w))
             items.append(item)
     else:
         train_img_path = os.path.join(root, 'test', 'Img')
         train_mask_path = os.path.join(root, 'test', 'GT')
         train_mask_weak_path = os.path.join(root, 'test', 'WeaklyAnnotations')
-        
+
         images = os.listdir(train_img_path)
         labels = os.listdir(train_mask_path)
         labels_weak = os.listdir(train_mask_weak_path)
-        
+
         images.sort()
         labels.sort()
         labels_weak.sort()
-         
-        for it_im, it_gt, it_w in zip(images, labels,labels_weak):
-            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt), os.path.join(train_mask_weak_path, it_w))
+
+        for it_im, it_gt, it_w in zip(images, labels, labels_weak):
+            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt),
+                    os.path.join(train_mask_weak_path, it_w))
             items.append(item)
 
     return items
@@ -131,27 +128,27 @@ class MedicalImageDataset(Dataset):
         img = Image.open(img_path)  # .convert('RGB')
         mask = Image.open(mask_path)  # .convert('RGB')
         mask_weak = Image.open(mask_weak_path).convert('L')
-        
+
         if self.equalize:
             img = ImageOps.equalize(img)
 
         if self.augmentation:
-            img, mask, mask_weak = self.augment(img, mask,mask_weak)
+            img, mask, mask_weak = self.augment(img, mask, mask_weak)
 
         if self.transform:
             img = self.transform(img)
             mask = self.mask_transform(mask)
-            mask = (mask==1).long()
+            mask = (mask == 1).long()
             # mask = self.mask_pixelvalue2OneHot(mask)
             mask_weak = self.mask_transform(mask_weak)
 
         return [img, mask, mask_weak, img_path]
 
-    def mask_pixelvalue2OneHot(self,mask):
+    def mask_pixelvalue2OneHot(self, mask):
         possible_pixel_values = [0.000000, 0.33333334, 0.66666669, 1.000000]
         mask_ = mask.clone()
-        for i,p in enumerate(possible_pixel_values):
-            mask_[(mask<p+0.1) &(mask>p-0.1)]=i
+        for i, p in enumerate(possible_pixel_values):
+            mask_[(mask < p + 0.1) & (mask > p - 0.1)] = i
         mask_ = mask_.long()
         return mask_
 
@@ -237,4 +234,3 @@ class MedicalImageDataset(Dataset):
 #                                     augment=False, equalize=False)
 #     print(len(train_set))
 #
-
