@@ -11,7 +11,7 @@ from PIL import Image, ImageOps
 from random import random, randint
 
 
-root_dir = '../ACDC-2D-All'
+root_dir = '../dataset/ACDC-2D-All'
 batch_size = 4
 num_workers = 4
 
@@ -90,7 +90,6 @@ def make_dataset(root, mode):
 
 
 class MedicalImageDataset(Dataset):
-    """Face Landmarks dataset."""
 
     def __init__(self, mode, root_dir, transform=None, mask_transform=None, augment=False, equalize=False):
         """

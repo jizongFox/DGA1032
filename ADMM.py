@@ -1,6 +1,6 @@
 import torch, numpy as np, torch.nn as nn, torch.nn.functional as F
 from network import UNet
-from criterion import CrossEntropyLoss2d
+from utils.criterion import CrossEntropyLoss2d
 import maxflow, matplotlib.pyplot as plt
 
 
