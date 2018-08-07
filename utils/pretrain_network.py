@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 from torchnet.meter import AverageValueMeter
-from criterion import  CrossEntropyLoss2d
+from utils.criterion import  CrossEntropyLoss2d
 
 device = "cuda" if torch.cuda.is_available()  else "cpu"
 
@@ -10,7 +10,7 @@ def pretrain(dataloader, network, path=None):
     class config:
         lr = 1e-3
         epochs = 100
-        path ='checkpoint/pretrained_net_good.pth'
+        path ='checkpoint/pretrained_net.pth'
 
 
     pretrain_config = config()

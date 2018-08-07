@@ -23,7 +23,7 @@ def pretrain(dataloader, network, path=None):
     for i in range(pretrain_config.epochs):
         loss_meter.reset()
 
-        for i, (img,mask,weak_mask,_) in tqdm(enumerate(dataloader)):
+        for j, (img,mask,weak_mask,_) in tqdm(enumerate(dataloader)):
             img,mask = img.to(device), mask.to(device)
             optimiser_.zero_grad()
             output = network(img)

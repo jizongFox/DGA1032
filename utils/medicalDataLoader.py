@@ -2,7 +2,7 @@
 from __future__ import print_function, division
 
 import os
-from random import random
+import random
 
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
@@ -107,19 +107,34 @@ class MedicalImageDataset(Dataset):
         return len(self.imgs)
 
     def augment(self, img, mask, weak_mask):
-        if random() > 0.5:
+        if random.random() > 0.5:
             img = ImageOps.flip(img)
             mask = ImageOps.flip(mask)
             weak_mask = ImageOps.flip(weak_mask)
-        if random() > 0.5:
+        if random.random() > 0.5:
             img = ImageOps.mirror(img)
             mask = ImageOps.mirror(mask)
             weak_mask = ImageOps.mirror(weak_mask)
-        if random() > 0.5:
-            angle = random() * 90 - 45
+        if random.random() > 0.5:
+            angle = random.random() * 90 - 45
             img = img.rotate(angle)
             mask = mask.rotate(angle)
             weak_mask = weak_mask.rotate(angle)
+
+        if random.random() > 0.2:
+            (w, h) = img.size
+            (w_, h_) = mask.size
+            assert (w==w_ and h==h_),'The size should be the same.'
+            crop = random.uniform(0.65, 0.95)
+            W = int(crop * w)
+            H = int(crop * h)
+            start_x = w - W
+            start_y = h - H
+            x_pos = int(random.uniform(0, start_x))
+            y_pos = int(random.uniform(0, start_y))
+            img = img.crop((x_pos, y_pos, x_pos + W, y_pos + H))
+            mask = mask.crop((x_pos, y_pos, x_pos + W, y_pos + H))
+
         return img, mask, weak_mask
 
     def __getitem__(self, index):
