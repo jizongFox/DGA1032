@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from network import UNet
+from utils.network import UNet
 from utils.criterion import CrossEntropyLoss2d
 
 
