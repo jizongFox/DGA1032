@@ -144,8 +144,8 @@ def main():
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
-            net.show_ublabel_image()
-            net.show_gamma()
+            # net.show_ublabel_image()
+            # net.show_gamma()
             # net.show_u()
 
         net.reset()
