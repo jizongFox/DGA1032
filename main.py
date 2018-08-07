@@ -118,7 +118,7 @@ def main():
     val_iou_tables.append(val_iou)
 
     plt.ion()
-    net = networks(neural_net, lowerbound=10, upperbound=2000)
+    net = networks(neural_net, lowerbound=50, upperbound=2000)
     labeled_dataLoader_, unlabeled_dataLoader_ = iter(
         labeled_dataLoader), iter(unlabeled_dataLoader)
     for iteration in tqdm(range(50000)):
@@ -151,12 +151,12 @@ def main():
         # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
         #     continue
 
-        for i in range(2):
+        for i in range(5):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
-            net.show_ublabel_image()
-            net.show_gamma()
+            # net.show_ublabel_image()
+            # net.show_gamma()
             # net.show_u()
 
         net.reset()

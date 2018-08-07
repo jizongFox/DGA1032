@@ -26,7 +26,7 @@ class networks(object):
         self.CEloss_criterion = CrossEntropyLoss2d()
         self.p_u = 1.0
         self.p_v = 1.0
-        self.lamda = 2
+        self.lamda = 2.5
         # self.set_bound=False
         self.sigma = 0.02
 
@@ -71,7 +71,7 @@ class networks(object):
         for i in range(5):
             CE_loss = self.CEloss_criterion(self.limage_output, self.lmask.squeeze(1))
             unlabled_loss = self.p_u / 2 * (F.softmax(self.uimage_output, dim=1)[:, 1] + torch.from_numpy(-self.gamma+self.u).float().cuda()).norm(p=2) ** 2 \
-                          + self.p_v /2 *(F.softmax(self.uimage_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().cuda()).norm(p=2) ** 2
+                         + self.p_v /2 *(F.softmax(self.uimage_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().cuda()).norm(p=2) ** 2
             unlabled_loss /=list(self.uimage_output.reshape(-1).size())[0]
 
             loss = CE_loss + unlabled_loss
@@ -85,7 +85,39 @@ class networks(object):
             self.limage_forward(self.limage,self.lmask)
 
     def set_boundary_term(self, g, nodeids, img, lumda, sigma):
+        transfer_function = lambda pixel_difference: lumda * np.exp((-1 / sigma) * pixel_difference)
+
         img = img.squeeze().cpu().data.numpy()
+
+        structure = np.zeros((3, 3))
+        structure[1, 2] = 1
+        pad_im = np.pad(img, ((0, 0), (1, 1)), 'constant', constant_values=0)
+        weights_ = np.abs(pad_im[:, 1:-1] - pad_im[:, 2:])
+        weights_ = transfer_function(weights_)
+        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+
+        structure = np.zeros((3, 3))
+        structure[2, 1] = 1
+        pad_im = np.pad(img, ((1, 1), (0, 0)), 'constant', constant_values=0)
+        weights_ = np.abs(pad_im[1:-1, :] - pad_im[2:, :])
+        weights_ = transfer_function(weights_)
+        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+
+        structure = np.zeros((3, 3))
+        structure[0, 2] = 1
+        pad_im = np.pad(img, ((1, 1), (1, 1)), 'constant', constant_values=0)
+        weights_ = np.abs(pad_im[1:-1, 1:-1] - pad_im[:-2, 2:])
+        weights_ = transfer_function(weights_)
+        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+
+        structure = np.zeros((3, 3))
+        structure[2, 2] = 1
+        pad_im = np.pad(img, ((1, 1), (1, 1)), 'constant', constant_values=0)
+        weights_ = np.abs(pad_im[1:-1, 1:-1] - pad_im[2:, 2:])
+        weights_ = transfer_function(weights_)
+        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+
+        '''previous implmentation
         pad_im = np.pad(img, ((0, 0), (1, 1)), 'constant', constant_values=0)
         weights = np.zeros((img.shape))
         for i in range(img.shape[0]):
@@ -103,6 +135,7 @@ class networks(object):
         structure = np.zeros((3, 3))
         structure[2, 1] = 1
         g.add_grid_edges(nodeids, structure=structure, weights=weights, symmetric=True)
+        '''
 
         return g
 
@@ -151,13 +184,9 @@ class networks(object):
     def update_u(self):
 
         # new_u = self.u + (F.softmax(self.uimage_output, dim=1)[:, 1, :, :].cpu().data.numpy() - self.gamma)
-        new_u = self.u + (self.heatmap2segmentation(self.uimage_output).cpu().data.numpy() - self.gamma)
-        # print(np.array((self.heatmap2segmentation(self.uimage_output).cpu().data.numpy() - self.gamma).nonzero()).sum())
-        assert new_u.shape == self.u.shape
-
-
-        self.u = new_u
-
+        # new_u = self.u + (self.heatmap2segmentation(self.uimage_output).cpu().data.numpy() - self.gamma)
+        # assert new_u.shape == self.u.shape
+        # self.u = new_u
         pass
 
     def update(self, limage_pair, uimage_pair):
@@ -254,8 +283,8 @@ class networks(object):
         plt.contour(self.heatmap2segmentation(self.uimage_output).squeeze().cpu().data.numpy(), level=[0],
                     colors="green", alpha=0.2, linewidth=0.001)
         plt.title('Gamma')
-        figManager = plt.get_current_fig_manager()
-        figManager.window.showMaximized()
+        # figManager = plt.get_current_fig_manager()
+        # figManager.window.showMaximized()
         plt.show(block=False)
         plt.pause(0.01)
 
