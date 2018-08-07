@@ -22,11 +22,11 @@ class networks(object):
         self.upbound = upperbound
         self.neural_net = neural_network
         self.reset()
-        self.optimiser = torch.optim.Adam(self.neural_net.parameters(), lr=0.001)
+        self.optimiser = torch.optim.Adam(self.neural_net.parameters(), lr=0.0001)
         self.CEloss_criterion = CrossEntropyLoss2d()
         self.p_u = 1.0
         self.p_v = 1.0
-        self.lamda = 0.1
+        self.lamda = 2
         # self.set_bound=False
         self.sigma = 0.02
 
@@ -68,17 +68,17 @@ class networks(object):
 
         self.neural_net.zero_grad()
 
-        for i in range(3):
+        for i in range(5):
             CE_loss = self.CEloss_criterion(self.limage_output, self.lmask.squeeze(1))
             unlabled_loss = self.p_u / 2 * (F.softmax(self.uimage_output, dim=1)[:, 1] + torch.from_numpy(-self.gamma+self.u).float().cuda()).norm(p=2) ** 2 \
-                            + self.p_v /2 *(F.softmax(self.uimage_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().cuda()).norm(p=2) ** 2
+                          #  + self.p_v /2 *(F.softmax(self.uimage_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().cuda()).norm(p=2) ** 2
 
-            loss = CE_loss + unlabled_loss
+            loss = 5*CE_loss + unlabled_loss
             # loss = unlabled_loss
             self.optimiser.zero_grad()
             loss.backward()
             self.optimiser.step()
-            print('loss:', loss.item())
+            # print('loss:', loss.item())
 
             self.uimage_forward(self.uimage, self.umask)
             self.limage_forward(self.limage,self.lmask)
@@ -163,7 +163,7 @@ class networks(object):
         [limage,lmask], [uimage,umask] = limage_pair,uimage_pair
         self.limage_forward(limage, lmask)
         self.uimage_forward(uimage, umask)
-        # self.update_theta()
+        self.update_theta()
         self.update_gamma()
         self.update_s()
         self.update_u()
@@ -196,6 +196,7 @@ class networks(object):
 
     def show_ublabel_image(self):
         fig = plt.figure(2, figsize=(8, 8))
+        plt.clf()
         fig.suptitle("Unlabeled data", fontsize=16)
 
         ax1 = fig.add_subplot(221)
@@ -244,12 +245,13 @@ class networks(object):
         plt.subplot(1, 1, 1)
         plt.imshow(self.uimage[0].cpu().data.numpy().squeeze(), cmap='gray')
         # plt.imshow(self.gamma[0])
-        plt.contour(self.umask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=1, linewidth=0.001)
-        plt.contour(self.heatmap2segmentation(self.uimage_output).squeeze().cpu().data.numpy(), level=[0],
-                    colors="green", alpha=0.5, linewidth=0.001)
-        plt.contour(self.s.squeeze(),level=[0],colors='blue',alpha = 0.5, linewidth = 0.001)
+        plt.contour(self.umask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=0.2, linewidth=0.001)
 
-        plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.3, linewidth=0.001)
+        plt.contour(self.s.squeeze(),level=[0],colors='blue',alpha = 0.2, linewidth = 0.001)
+
+        plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001)
+        plt.contour(self.heatmap2segmentation(self.uimage_output).squeeze().cpu().data.numpy(), level=[0],
+                    colors="green", alpha=0.2, linewidth=0.001)
         plt.title('Gamma')
         figManager = plt.get_current_fig_manager()
         figManager.window.showMaximized()
@@ -270,7 +272,7 @@ class networks(object):
 if __name__ == "__main__":
     net = UNet(num_classes=2)
     net_ = networks(net, 10, 100)
-    for i in xrange(10):
+    for i in range(10):
         limage = torch.randn(1, 1, 256, 256)
         uimage = torch.randn(1, 1, 256, 256)
         lmask = torch.randint(0, 2, (1, 256, 256), dtype=torch.long)

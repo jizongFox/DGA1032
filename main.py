@@ -2,6 +2,7 @@
 import copy
 import os
 import sys
+import pandas as pd
 
 sys.path.insert(-1, os.getcwd())
 import warnings
@@ -10,13 +11,16 @@ warnings.filterwarnings('ignore')
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import utils.medicalDataLoader as medicalDataLoader
 from ADMM import networks
 from utils.enet import Enet
 from utils.pretrain_network import pretrain
-from utils.utils import Colorize
+from utils.utils import Colorize,dice_loss
+from torchnet.meter import AverageValueMeter
+from tqdm import  tqdm
 
 torch.manual_seed(7)
 np.random.seed(2)
@@ -32,7 +36,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
 batch_size = 1
 batch_size_val = 1
-num_workers = 0
+num_workers = 4
 lr = 0.001
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'
@@ -50,9 +54,23 @@ mask_transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-
 train_set = medicalDataLoader.MedicalImageDataset('train', data_dir, transform=transform, mask_transform=mask_transform,
                                                   augment=True, equalize=False)
+val_iou_tables = []
+
+def val(val_dataloader, network):
+
+    network.eval()
+    dice_meter = AverageValueMeter()
+    dice_meter.reset()
+    for i, (image, mask,_,_) in enumerate(val_dataloader):
+        image,mask = image.to(device),mask.to(device)
+        proba = F.softmax(network(image),dim=1)
+        predicted_mask = proba.max(1)[1]
+        iou = dice_loss(predicted_mask,mask).item()
+        dice_meter.add(iou)
+    print('val iou:  %.2f'%dice_meter.value()[0])
+    return dice_meter.value()[0]
 
 
 def main():
@@ -88,31 +106,41 @@ def main():
     # Uncomment the following line to pretrain the model with few fully labeled data.
     # pretrain(labeled_dataLoader,neural_net,)
 
-    map_location= lambda storage, loc:storage
+    map_location = lambda storage, loc: storage
 
     neural_net.load_state_dict(torch.load(
         'checkpoint/pretrained_net.pth', map_location=map_location))
     neural_net.to(device)
-    plt.ion()
+    val_iou =  val(val_loader,neural_net)
+    # print(val_iou)
+    val_iou_tables.append(val_iou)
 
-    net = networks(neural_net, lowerbound=10, upperbound=1000)
-    for iteration in range(300):
+    plt.ion()
+    net = networks(neural_net, lowerbound=500, upperbound=2000)
+    labeled_dataLoader_, unlabeled_dataLoader_ = iter(
+        labeled_dataLoader), iter(unlabeled_dataLoader)
+    for iteration in tqdm(range(200)):
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
-        labeled_dataLoader, unlabeled_dataLoader = iter(
-            labeled_dataLoader), iter(unlabeled_dataLoader)
-        labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader)[0:3]
+        try:
+            labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
+        except:
+            labeled_dataLoader_ = iter(labeled_dataLoader)
+            labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
         labeled_img, labeled_mask, labeled_weak_mask = labeled_img.to(device), labeled_mask.to(
             device), labeled_weak_mask.to(device)
-        unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader)[0:2]
+        try:
+            unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
+        except:
+            unlabeled_dataLoader_ = iter(unlabeled_dataLoader)
+            unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
         unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
 
         # skip those with no foreground masks
-        if labeled_mask.sum() <= 50 :#or labeled_mask.sum() >= 1000:
+        if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
             continue
 
-
-        for i in range(2):
+        for i in range(1):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
@@ -121,6 +149,12 @@ def main():
             # net.show_u()
 
         net.reset()
+
+        if (iteration+1) % 100 ==0:
+            val_iou = val(val_loader,net.neural_net)
+            val_iou_tables.append(val_iou)
+    pd.Series(val_iou_tables).to_csv('val_iou.csv')
+
 
 
 if __name__ == "__main__":
