@@ -166,7 +166,10 @@ class networks(object):
         # The labels should be 1 where sgm is False and 0 otherwise.
         new_gamma[i] = np.int_(np.logical_not(sgm))
         # g.reset()
-        self.gamma = new_gamma
+        if new_gamma.sum()>0:
+            self.gamma = new_gamma
+        else:
+            self.gamma = self.s
 
 
     def update_s(self):
@@ -193,9 +196,10 @@ class networks(object):
         [limage,lmask], [uimage,umask] = limage_pair,uimage_pair
         self.limage_forward(limage, lmask)
         self.uimage_forward(uimage, umask)
-        self.update_theta()
-        self.update_gamma()
         self.update_s()
+        self.update_gamma()
+
+        self.update_theta()
         self.update_u()
 
     def show_labeled_pair(self):

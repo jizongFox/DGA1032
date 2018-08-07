@@ -31,7 +31,7 @@ np.random.seed(2)
 use_gpu = True
 # device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
 device = torch.device('cuda')
-cuda_device = "2"
+cuda_device = "0"
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
 batch_size = 1
@@ -55,7 +55,7 @@ mask_transform = transforms.Compose([
 ])
 
 train_set = medicalDataLoader.MedicalImageDataset('train', data_dir, transform=transform, mask_transform=mask_transform,
-                                                  augment=False, equalize=False)
+                                                  augment=True, equalize=False)
 val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=transform, mask_transform=mask_transform,
                                                 equalize=False)
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
@@ -155,8 +155,8 @@ def main():
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
-            # net.show_ublabel_image()
-            # net.show_gamma()
+            net.show_ublabel_image()
+            net.show_gamma()
             # net.show_u()
 
         net.reset()
