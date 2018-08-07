@@ -55,7 +55,10 @@ mask_transform = transforms.Compose([
 ])
 
 train_set = medicalDataLoader.MedicalImageDataset('train', data_dir, transform=transform, mask_transform=mask_transform,
-                                                  augment=True, equalize=False)
+                                                  augment=False, equalize=False)
+val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=transform, mask_transform=mask_transform,
+                                                equalize=False)
+val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
 val_iou_tables = []
 
 def val(val_dataloader, network):
@@ -64,18 +67,20 @@ def val(val_dataloader, network):
     dice_meter = AverageValueMeter()
     dice_meter.reset()
     for i, (image, mask,_,_) in enumerate(val_dataloader):
+        # if mask.sum()<=500:
+        #     continue
         image,mask = image.to(device),mask.to(device)
         proba = F.softmax(network(image),dim=1)
         predicted_mask = proba.max(1)[1]
         iou = dice_loss(predicted_mask,mask).item()
         dice_meter.add(iou)
-    print('val iou:  %.2f'%dice_meter.value()[0])
+    print('val iou:  %.6f'%dice_meter.value()[0])
     return dice_meter.value()[0]
 
 
 def main():
     # Here we have to split the fully annotated dataset and unannotated dataset
-    split_ratio = 0.2
+    split_ratio = 0.1
     random_index = np.random.permutation(len(train_set))
     labeled_dataset = copy.deepcopy(train_set)
     labeled_dataset.imgs = [train_set.imgs[x]
@@ -93,10 +98,7 @@ def main():
         unlabeled_dataset, batch_size=1, num_workers=num_workers, shuffle=True)
     # Here we terminate the split of labeled and unlabeled data
     # the validation set is for computing the dice loss.
-    val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=transform, mask_transform=mask_transform,
-                                                    equalize=False)
-    val_loader = DataLoader(
-        val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
+
 
     ##
     ##=====================================================================================================================#
@@ -104,7 +106,7 @@ def main():
     neural_net = Enet(2)
 
     # Uncomment the following line to pretrain the model with few fully labeled data.
-    # pretrain(labeled_dataLoader,neural_net,)
+    # pretrain(labeled_dataLoader,val_loader,neural_net,)
 
     map_location = lambda storage, loc: storage
 
@@ -116,12 +118,21 @@ def main():
     val_iou_tables.append(val_iou)
 
     plt.ion()
-    net = networks(neural_net, lowerbound=500, upperbound=2000)
+    net = networks(neural_net, lowerbound=10, upperbound=2000)
     labeled_dataLoader_, unlabeled_dataLoader_ = iter(
         labeled_dataLoader), iter(unlabeled_dataLoader)
-    for iteration in tqdm(range(200)):
+    for iteration in tqdm(range(50000)):
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
+
+        if (iteration+1) % 100 ==0:
+            val_iou = val(val_loader,net.neural_net)
+            val_iou_tables.append(val_iou)
+        try:
+            pd.Series(val_iou_tables).to_csv('val_iou.csv')
+        except:
+            pass
+
         try:
             labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
         except:
@@ -137,23 +148,19 @@ def main():
         unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
 
         # skip those with no foreground masks
-        if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
-            continue
+        # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
+        #     continue
 
-        for i in range(1):
+        for i in range(2):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
-            # net.show_ublabel_image()
-            # net.show_gamma()
+            net.show_ublabel_image()
+            net.show_gamma()
             # net.show_u()
 
         net.reset()
 
-        if (iteration+1) % 100 ==0:
-            val_iou = val(val_loader,net.neural_net)
-            val_iou_tables.append(val_iou)
-    pd.Series(val_iou_tables).to_csv('val_iou.csv')
 
 
 

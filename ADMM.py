@@ -71,9 +71,10 @@ class networks(object):
         for i in range(5):
             CE_loss = self.CEloss_criterion(self.limage_output, self.lmask.squeeze(1))
             unlabled_loss = self.p_u / 2 * (F.softmax(self.uimage_output, dim=1)[:, 1] + torch.from_numpy(-self.gamma+self.u).float().cuda()).norm(p=2) ** 2 \
-                          #  + self.p_v /2 *(F.softmax(self.uimage_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().cuda()).norm(p=2) ** 2
+                          + self.p_v /2 *(F.softmax(self.uimage_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().cuda()).norm(p=2) ** 2
+            unlabled_loss /=list(self.uimage_output.reshape(-1).size())[0]
 
-            loss = 5*CE_loss + unlabled_loss
+            loss = CE_loss + unlabled_loss
             # loss = unlabled_loss
             self.optimiser.zero_grad()
             loss.backward()
