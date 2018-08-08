@@ -26,9 +26,16 @@ class networks(object):
         self.CEloss_criterion = CrossEntropyLoss2d()
         self.p_u = 1.0
         self.p_v = 1.0
-        self.lamda = 2.5
+        self.lamda = 3
         # self.set_bound=False
         self.sigma = 0.02
+        self.kernelsize=3
+        self.initial_kernel()
+
+
+    def initial_kernel(self):
+        self.kernel = np.ones((self.kernelsize,self.kernelsize))
+        self.kernel[int(self.kernelsize.shape[0]/2),int(self.kernelsize.shape[1]/2)]=0
 
     def limage_forward(self, limage, lmask):
         self.limage = limage
@@ -75,7 +82,6 @@ class networks(object):
             unlabled_loss /=list(self.uimage_output.reshape(-1).size())[0]
 
             loss = CE_loss + unlabled_loss
-            # loss = unlabled_loss
             self.optimiser.zero_grad()
             loss.backward()
             self.optimiser.step()
@@ -85,6 +91,8 @@ class networks(object):
             self.limage_forward(self.limage,self.lmask)
 
     def set_boundary_term(self, g, nodeids, img, lumda, sigma):
+        kernel = self.kernel
+
         transfer_function = lambda pixel_difference: lumda * np.exp((-1 / sigma) * pixel_difference)
 
         img = img.squeeze().cpu().data.numpy()
@@ -116,26 +124,6 @@ class networks(object):
         weights_ = np.abs(pad_im[1:-1, 1:-1] - pad_im[2:, 2:])
         weights_ = transfer_function(weights_)
         g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
-
-        '''previous implmentation
-        pad_im = np.pad(img, ((0, 0), (1, 1)), 'constant', constant_values=0)
-        weights = np.zeros((img.shape))
-        for i in range(img.shape[0]):
-            for j in range(img.shape[1]):
-                weights[i, j] = lumda * np.exp((-1 / sigma) * np.abs(pad_im[i, j] - pad_im[i, j + 1]))
-        structure = np.zeros((3, 3))
-        structure[1, 2] = 1
-        g.add_grid_edges(nodeids, structure=structure, weights=weights, symmetric=True)
-
-        pad_im = np.pad(img, ((1, 1), (0, 0)), 'constant', constant_values=0)
-        weights = np.zeros((img.shape))
-        for i in range(img.shape[0]):
-            for j in range(img.shape[1]):
-                weights[i, j] = lumda * np.exp((-1 / sigma) * np.abs(pad_im[i, j] - pad_im[i + 1, j]))
-        structure = np.zeros((3, 3))
-        structure[2, 1] = 1
-        g.add_grid_edges(nodeids, structure=structure, weights=weights, symmetric=True)
-        '''
 
         return g
 
