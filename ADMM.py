@@ -26,16 +26,16 @@ class networks(object):
         self.CEloss_criterion = CrossEntropyLoss2d()
         self.p_u = 1.0
         self.p_v = 1.0
-        self.lamda = 3
+        self.lamda = 8
         # self.set_bound=False
         self.sigma = 0.02
-        self.kernelsize=3
+        self.kernelsize=7
         self.initial_kernel()
 
 
     def initial_kernel(self):
         self.kernel = np.ones((self.kernelsize,self.kernelsize))
-        self.kernel[int(self.kernelsize.shape[0]/2),int(self.kernelsize.shape[1]/2)]=0
+        self.kernel[int(self.kernel.shape[0]/2),int(self.kernel.shape[1]/2)]=0
 
     def limage_forward(self, limage, lmask):
         self.limage = limage
@@ -92,38 +92,32 @@ class networks(object):
 
     def set_boundary_term(self, g, nodeids, img, lumda, sigma):
         kernel = self.kernel
-
         transfer_function = lambda pixel_difference: lumda * np.exp((-1 / sigma) * pixel_difference)
 
         img = img.squeeze().cpu().data.numpy()
 
-        structure = np.zeros((3, 3))
-        structure[1, 2] = 1
-        pad_im = np.pad(img, ((0, 0), (1, 1)), 'constant', constant_values=0)
-        weights_ = np.abs(pad_im[:, 1:-1] - pad_im[:, 2:])
-        weights_ = transfer_function(weights_)
-        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+# =====new =========================================
+        padding_size = int(max(kernel.shape) / 2)
+        position = np.array(list(zip(*np.where(kernel != 0))))
 
-        structure = np.zeros((3, 3))
-        structure[2, 1] = 1
-        pad_im = np.pad(img, ((1, 1), (0, 0)), 'constant', constant_values=0)
-        weights_ = np.abs(pad_im[1:-1, :] - pad_im[2:, :])
-        weights_ = transfer_function(weights_)
-        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+        def shift_matrix(matrix, kernel):
+            center_x, center_y = int(kernel.shape[0] / 2), int(kernel.shape[1] / 2)
+            [kernel_x, kernel_y] = np.array(list(zip(*np.where(kernel == 1))))[0]
+            dy, dx = kernel_x - center_x, kernel_y - center_y
+            shifted_matrix = np.roll(matrix, -dy, axis=0)
+            shifted_matrix = np.roll(shifted_matrix, -dx, axis=1)
+            return shifted_matrix
 
-        structure = np.zeros((3, 3))
-        structure[0, 2] = 1
-        pad_im = np.pad(img, ((1, 1), (1, 1)), 'constant', constant_values=0)
-        weights_ = np.abs(pad_im[1:-1, 1:-1] - pad_im[:-2, 2:])
-        weights_ = transfer_function(weights_)
-        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+        for p in position:
+            structure = np.zeros(kernel.shape)
+            structure[p[0], p[1]] = kernel[p[0], p[1]]
+            pad_im = np.pad(img, ((padding_size, padding_size), (padding_size, padding_size)), 'constant',
+                            constant_values=0)
+            shifted_im = shift_matrix(pad_im, structure)
+            weights_ = transfer_function(np.abs(pad_im - shifted_im)[padding_size:-padding_size, padding_size:-padding_size])
 
-        structure = np.zeros((3, 3))
-        structure[2, 2] = 1
-        pad_im = np.pad(img, ((1, 1), (1, 1)), 'constant', constant_values=0)
-        weights_ = np.abs(pad_im[1:-1, 1:-1] - pad_im[2:, 2:])
-        weights_ = transfer_function(weights_)
-        g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=True)
+            g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=False)
+
 
         return g
 
