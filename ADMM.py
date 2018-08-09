@@ -29,7 +29,7 @@ class networks(object):
         self.lamda = 8
         # self.set_bound=False
         self.sigma = 0.02
-        self.kernelsize=7
+        self.kernelsize=5
         self.initial_kernel()
 
 
@@ -92,7 +92,7 @@ class networks(object):
 
     def set_boundary_term(self, g, nodeids, img, lumda, sigma):
         kernel = self.kernel
-        transfer_function = lambda pixel_difference: lumda * np.exp((-1 / sigma) * pixel_difference)
+        transfer_function = lambda pixel_difference: lumda * np.exp((-1 / sigma**2) * pixel_difference**2)
 
         img = img.squeeze().cpu().data.numpy()
 

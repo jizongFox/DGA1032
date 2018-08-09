@@ -18,15 +18,12 @@ import utils.medicalDataLoader as medicalDataLoader
 from ADMM import networks
 from utils.enet import Enet
 from utils.pretrain_network import pretrain
-from utils.utils import Colorize,dice_loss
+from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
-from tqdm import  tqdm
+from tqdm import tqdm
 
 torch.manual_seed(7)
 np.random.seed(2)
-
-# board_image = Dashboard(server='http://localhost', env="ADMM_image")
-# board_loss = Dashboard(server='http://localhost', env="ADMM_loss")
 
 use_gpu = True
 # device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
@@ -61,20 +58,20 @@ val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=trans
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
 val_iou_tables = []
 
-def val(val_dataloader, network):
 
+def val(val_dataloader, network):
     network.eval()
     dice_meter = AverageValueMeter()
     dice_meter.reset()
-    for i, (image, mask,_,_) in enumerate(val_dataloader):
+    for i, (image, mask, _, _) in enumerate(val_dataloader):
         # if mask.sum()<=500:
         #     continue
-        image,mask = image.to(device),mask.to(device)
-        proba = F.softmax(network(image),dim=1)
+        image, mask = image.to(device), mask.to(device)
+        proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
-        iou = dice_loss(predicted_mask,mask).item()
+        iou = dice_loss(predicted_mask, mask).item()
         dice_meter.add(iou)
-    print('val iou:  %.6f'%dice_meter.value()[0])
+    print('val iou:  %.6f' % dice_meter.value()[0])
     return dice_meter.value()[0]
 
 
@@ -99,7 +96,6 @@ def main():
     # Here we terminate the split of labeled and unlabeled data
     # the validation set is for computing the dice loss.
 
-
     ##
     ##=====================================================================================================================#
 
@@ -113,20 +109,19 @@ def main():
     neural_net.load_state_dict(torch.load(
         'checkpoint/pretrained_net.pth', map_location=map_location))
     neural_net.to(device)
-    val_iou =  val(val_loader,neural_net)
+    val_iou = val(val_loader, neural_net)
     # print(val_iou)
     val_iou_tables.append(val_iou)
 
     plt.ion()
     net = networks(neural_net, lowerbound=50, upperbound=2000)
-    labeled_dataLoader_, unlabeled_dataLoader_ = iter(
-        labeled_dataLoader), iter(unlabeled_dataLoader)
+    labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)
     for iteration in tqdm(range(50000)):
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
 
-        if (iteration+1) % 100 ==0:
-            val_iou = val(val_loader,net.neural_net)
+        if (iteration + 1) % 100 == 0:
+            val_iou = val(val_loader, net.neural_net)
             val_iou_tables.append(val_iou)
         try:
             pd.Series(val_iou_tables).to_csv('val_iou.csv')
@@ -151,17 +146,15 @@ def main():
         # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
         #     continue
 
-        for i in range(20):
+        for i in range(2):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
-            net.show_ublabel_image()
-            net.show_gamma()
+            # net.show_ublabel_image()
+            # net.show_gamma()
             # net.show_u()
 
         net.reset()
-
-
 
 
 if __name__ == "__main__":
