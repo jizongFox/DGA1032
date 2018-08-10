@@ -261,16 +261,18 @@ class networks(object):
         plt.subplot(1, 1, 1)
         plt.imshow(self.uimage[0].cpu().data.numpy().squeeze(), cmap='gray')
         # plt.imshow(self.gamma[0])
-        plt.contour(self.umask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=0.2, linewidth=0.001)
+        plt.contour(self.umask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=0.2, linewidth=0.001,label = 'GT')
 
-        plt.contour(self.s.squeeze(),level=[0],colors='blue',alpha = 0.2, linewidth = 0.001)
 
-        plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001)
+
+        plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001,label = 'graphcut')
+        plt.contour(self.s.squeeze(),level=[0],colors='blue',alpha = 0.2, linewidth = 0.001, label='size_constraint')
         plt.contour(self.heatmap2segmentation(self.uimage_output).squeeze().cpu().data.numpy(), level=[0],
-                    colors="green", alpha=0.2, linewidth=0.001)
+                    colors="green", alpha=0.2, linewidth=0.001, label='CNN')
         plt.title('Gamma')
         # figManager = plt.get_current_fig_manager()
         # figManager.window.showMaximized()
+        plt.legend()
         plt.show(block=False)
         plt.pause(0.01)
 

@@ -3,7 +3,6 @@ import copy
 import os
 import sys
 import pandas as pd
-
 sys.path.insert(-1, os.getcwd())
 import warnings
 
@@ -120,9 +119,9 @@ def main():
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
 
-        if (iteration + 1) % 100 == 0:
-            val_iou = val(val_loader, net.neural_net)
-            val_iou_tables.append(val_iou)
+        # if (iteration + 1) % 100 == 0:
+        #     val_iou = val(val_loader, net.neural_net)
+        #     val_iou_tables.append(val_iou)
         try:
             pd.Series(val_iou_tables).to_csv('val_iou.csv')
         except:
@@ -146,12 +145,13 @@ def main():
         # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
         #     continue
 
-        for i in range(2):
+        for i in range(1):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
-            # net.show_ublabel_image()
-            # net.show_gamma()
+            net.show_ublabel_image()
+            net.show_gamma()
+            print()
             # net.show_u()
 
         net.reset()
