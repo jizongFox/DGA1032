@@ -16,7 +16,6 @@ from torchvision import transforms
 import utils.medicalDataLoader as medicalDataLoader
 from ADMM import networks
 from utils.enet import Enet
-from utils.pretrain_network import pretrain
 from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
 from tqdm import tqdm
