@@ -3,10 +3,12 @@ import copy
 import os
 import sys
 import pandas as pd
+
 sys.path.insert(-1, os.getcwd())
 import warnings
 
 warnings.filterwarnings('ignore')
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -16,6 +18,7 @@ from torchvision import transforms
 import utils.medicalDataLoader as medicalDataLoader
 from ADMM import networks
 from utils.enet import Enet
+
 from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
 from tqdm import tqdm
@@ -74,46 +77,11 @@ def val(val_dataloader, network):
 
 
 def main():
-    # Here we have to split the fully annotated dataset and unannotated dataset
-    split_ratio = 0.1
-    random_index = np.random.permutation(len(train_set))
-    labeled_dataset = copy.deepcopy(train_set)
-    labeled_dataset.imgs = [train_set.imgs[x]
-                            for x in random_index[:int(len(random_index) * split_ratio)]]
-    unlabeled_dataset = copy.deepcopy(train_set)
-    unlabeled_dataset.imgs = [train_set.imgs[x]
-                              for x in random_index[int(len(random_index) * split_ratio):]]
-    assert set(unlabeled_dataset.imgs) & set(
-        labeled_dataset.imgs) == set(), \
-        "there's intersection between labeled and unlabeled training set."
-
-    labeled_dataLoader = DataLoader(
-        labeled_dataset, batch_size=1, num_workers=num_workers, shuffle=True)
-    unlabeled_dataLoader = DataLoader(
-        unlabeled_dataset, batch_size=1, num_workers=num_workers, shuffle=True)
-    # Here we terminate the split of labeled and unlabeled data
-    # the validation set is for computing the dice loss.
-
-    ##
-    ##=====================================================================================================================#
-
     neural_net = Enet(2)
-
-    # Uncomment the following line to pretrain the model with few fully labeled data.
-    # pretrain(labeled_dataLoader,val_loader,neural_net,)
-
-    map_location = lambda storage, loc: storage
-
-    neural_net.load_state_dict(torch.load(
-        'checkpoint/pretrained_net.pth', map_location=map_location))
     neural_net.to(device)
-    val_iou = val(val_loader, neural_net)
-    # print(val_iou)
-    val_iou_tables.append(val_iou)
-
-    plt.ion()
     net = networks(neural_net, lowerbound=50, upperbound=2000)
-    labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)
+    plt.ion()
+    # labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)
     for iteration in tqdm(range(50000)):
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
@@ -127,17 +95,21 @@ def main():
             pass
 
         try:
-            labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
+            pass
+            # labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
         except:
-            labeled_dataLoader_ = iter(labeled_dataLoader)
-            labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
+            pass
+            # labeled_dataLoader_ = iter(labeled_dataLoader)
+            # labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
         labeled_img, labeled_mask, labeled_weak_mask = labeled_img.to(device), labeled_mask.to(
             device), labeled_weak_mask.to(device)
         try:
-            unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
+            pass
+            # unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
         except:
-            unlabeled_dataLoader_ = iter(unlabeled_dataLoader)
-            unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
+            pass
+            # unlabeled_dataLoader_ = iter(unlabeled_dataLoader)
+            # unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
         unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
 
         # skip those with no foreground masks
@@ -150,9 +122,7 @@ def main():
             # net.show_labeled_pair()
             net.show_ublabel_image()
             net.show_gamma()
-            print()
             # net.show_u()
-
         net.reset()
 
 
