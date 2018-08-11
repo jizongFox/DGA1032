@@ -12,6 +12,7 @@ warnings.filterwarnings('ignore')
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -37,6 +38,7 @@ batch_size_val = 1
 num_workers = 4
 lr = 0.001
 max_epoch = 100
+max_inner_epoch = 1000
 data_dir = 'dataset/ACDC-2D-All'
 
 size_min = 5
@@ -54,6 +56,7 @@ mask_transform = transforms.Compose([
 
 train_set = medicalDataLoader.MedicalImageDataset('train', data_dir, transform=transform, mask_transform=mask_transform,
                                                   augment=True, equalize=False)
+train_loader = DataLoader(train_set,batch_size= batch_size,num_workers=num_workers, shuffle=True)
 val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=transform, mask_transform=mask_transform,
                                                 equalize=False)
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
@@ -65,8 +68,6 @@ def val(val_dataloader, network):
     dice_meter = AverageValueMeter()
     dice_meter.reset()
     for i, (image, mask, _, _) in enumerate(val_dataloader):
-        # if mask.sum()<=500:
-        #     continue
         image, mask = image.to(device), mask.to(device)
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
@@ -80,9 +81,21 @@ def main():
     neural_net = Enet(2)
     neural_net.to(device)
     net = networks(neural_net, lowerbound=50, upperbound=2000)
+
     plt.ion()
-    # labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)
-    for iteration in tqdm(range(50000)):
+    for iteration in tqdm(range(max_epoch)):
+        for i, (img,full_mask,weak_mask,_) in enumerate(train_loader):
+            if weak_mask.sum()<=0:
+                continue
+            img, weak_mask = img.to(device), weak_mask.to(device)
+            for j in range (max_inner_epoch):
+                net.update([img,weak_mask])
+                net.show_gamma()
+                net.show_labeled_pair()
+            net.reset()
+
+
+
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
 
@@ -120,11 +133,13 @@ def main():
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_labeled_pair()
-            net.show_ublabel_image()
+            # net.show_ublabel_image()
             net.show_gamma()
             # net.show_u()
+            print()
         net.reset()
 
 
 if __name__ == "__main__":
+    torch.random.manual_seed(1)
     main()

@@ -7,6 +7,8 @@ import random
 from PIL import Image, ImageOps
 from torch.utils.data import Dataset
 from torchvision import transforms
+import matplotlib.pyplot as plt
+import numpy as np
 
 root_dir = '../dataset/ACDC-2D-All'
 batch_size = 4
@@ -134,6 +136,7 @@ class MedicalImageDataset(Dataset):
             y_pos = int(random.uniform(0, start_y))
             img = img.crop((x_pos, y_pos, x_pos + W, y_pos + H))
             mask = mask.crop((x_pos, y_pos, x_pos + W, y_pos + H))
+            weak_mask = weak_mask.crop((x_pos, y_pos, x_pos + W, y_pos + H))
 
         return img, mask, weak_mask
 
@@ -154,9 +157,8 @@ class MedicalImageDataset(Dataset):
             img = self.transform(img)
             mask = self.mask_transform(mask)
             mask = (mask == 1).long()
-            # mask = self.mask_pixelvalue2OneHot(mask)
             mask_weak = self.mask_transform(mask_weak)
-
+            mask_weak = (mask_weak ==1).long()
         return [img, mask, mask_weak, img_path]
 
     def mask_pixelvalue2OneHot(self, mask):
