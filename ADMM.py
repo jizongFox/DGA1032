@@ -46,6 +46,9 @@ class networks(object):
         self.umask = umask
         self.uimage = uimage
         self.uimage_output = self.neural_net(uimage)
+        self.mask_size = self.umask.sum().item()
+        self.lowbound= self.mask_size-10
+        self.upbound = self.mask_size+10
         if self.gamma is None:
             self.__initialize_dummy_variables(self.uimage_output)
 
@@ -169,10 +172,10 @@ class networks(object):
     def update_u(self):
 
         # new_u = self.u + (F.softmax(self.uimage_output, dim=1)[:, 1, :, :].cpu().data.numpy() - self.gamma)
-        # new_u = self.u + (self.heatmap2segmentation(self.uimage_output).cpu().data.numpy() - self.gamma)
+        new_u = self.u + (self.uimage_output[0,1].cpu().data.numpy() - self.gamma)*0.01
         # assert new_u.shape == self.u.shape
-        # self.u = new_u
-        pass
+        self.u = new_u
+        # pass
 
     def update(self, limage_pair, uimage_pair):
         [limage,lmask], [uimage,umask] = limage_pair,uimage_pair
