@@ -174,11 +174,15 @@ class networks(object):
 
     def update_u(self):
 
-        # new_u = self.u + (F.softmax(self.uimage_output, dim=1)[:, 1, :, :].cpu().data.numpy() - self.gamma)
-        new_u = self.u + (self.uimage_output[0, 1].cpu().data.numpy() - self.gamma) * 0.01
-        # assert new_u.shape == self.u.shape
-        self.u = new_u
-        # pass
+        # new_u = self.u + (self.uimage_output[0, 1].cpu().data.numpy() - self.gamma) * 0.01
+        # self.u = new_u
+        pass
+
+    def update_v(self):
+        # new_v = self.v + (self.uimage_output[0, 1].cpu().data.numpy() - self.s) * 0.001
+        # self.v = new_v
+        pass
+
 
     def update(self, limage_pair, uimage_pair):
         [limage, lmask], [uimage, umask] = limage_pair, uimage_pair
@@ -188,6 +192,7 @@ class networks(object):
         self.update_gamma()
         self.update_theta()
         self.update_u()
+        self.update_v()
 
     def show_labeled_pair(self):
         fig = plt.figure(1, figsize=(32, 32))

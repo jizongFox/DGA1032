@@ -120,7 +120,7 @@ def main():
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
 
-        if (iteration + 1) % 100 == 0:
+        if (iteration + 1) % 1255 == 0:
             val_iou = val(val_loader, net.neural_net)
             val_iou_tables.append(val_iou)
         try:
