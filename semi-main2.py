@@ -17,12 +17,13 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import utils.medicalDataLoader as medicalDataLoader
-from ADMM import networks
 from utils.enet import Enet
-
+from utils.criterion import CrossEntropyLoss2d
 from utils.utils import Colorize, dice_loss
+from utils.visualize import Dashboard
 from torchnet.meter import AverageValueMeter
 from tqdm import tqdm
+import click
 
 torch.manual_seed(7)
 np.random.seed(2)
@@ -33,16 +34,15 @@ device = torch.device('cuda')
 cuda_device = "0"
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
-batch_size = 1
+batch_size = 8
 batch_size_val = 1
-num_workers = 4
-lr = 0.001
+num_workers = 8
+
 max_epoch = 100
 max_inner_epoch = 1000
 data_dir = 'dataset/ACDC-2D-All'
 
-size_min = 5
-size_max = 20
+# broad = Dashboard(server='http://localhost')
 
 color_transform = Colorize()
 transform = transforms.Compose([
@@ -73,71 +73,42 @@ def val(val_dataloader, network):
         predicted_mask = proba.max(1)[1]
         iou = dice_loss(predicted_mask, mask).item()
         dice_meter.add(iou)
+        # broad.image(image[0],'image')
+        # broad.image(proba[0],'prediction')
+
     print('val iou:  %.6f' % dice_meter.value()[0])
+    network.train()
     return dice_meter.value()[0]
 
-
-def main():
+@click.command()
+@click.option('--lr',default= 1e-6, help= 'learning rate, default 1e-6')
+@click.option('--b_weight',default=1e-2, help='background weigth when foreground setting to be 1')
+def main(lr, b_weight):
     neural_net = Enet(2)
     neural_net.to(device)
-    net = networks(neural_net, lowerbound=50, upperbound=2000)
+    weight = [float(b_weight), 1]
+    criterion = CrossEntropyLoss2d(torch.Tensor(weight)).to(device)
+    optimiser = torch.optim.Adam(neural_net.parameters(),lr =lr,weight_decay=1e-5)
 
     plt.ion()
-    for iteration in tqdm(range(max_epoch)):
-        for i, (img,full_mask,weak_mask,_) in enumerate(train_loader):
+    for epoch in tqdm(range(max_epoch)):
+        for i, (img,full_mask,weak_mask,_) in tqdm(enumerate(train_loader)):
             if weak_mask.sum()<=0:
                 continue
-            img, weak_mask = img.to(device), weak_mask.to(device)
-            for j in range (max_inner_epoch):
-                net.update([img,weak_mask])
-                net.show_gamma()
-                net.show_labeled_pair()
-            net.reset()
+            img, full_mask, weak_mask = img.to(device), full_mask.to(device), weak_mask.to(device)
 
-
-
-        # choose randomly a batch of image from labeled dataset and unlabeled dataset.
-        # Initialize the ADMM dummy variables for one-batch training
-
-        # if (iteration + 1) % 100 == 0:
-        #     val_iou = val(val_loader, net.neural_net)
-        #     val_iou_tables.append(val_iou)
+            score = neural_net(img)
+            loss = criterion(score, weak_mask.squeeze(1).long())
+            optimiser.zero_grad()
+            loss.backward()
+            optimiser.step()
+        val_iou = val(val_loader, neural_net)
+        val_iou_tables.append(val_iou)
+        print(epoch,': ',val_iou)
         try:
-            pd.Series(val_iou_tables).to_csv('val_iou.csv')
+            pd.Series(val_iou_tables).to_csv('val_iou_lr_%f_bw_%f.csv'%(lr,b_weight))
         except:
-            pass
-
-        try:
-            pass
-            # labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
-        except:
-            pass
-            # labeled_dataLoader_ = iter(labeled_dataLoader)
-            # labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
-        labeled_img, labeled_mask, labeled_weak_mask = labeled_img.to(device), labeled_mask.to(
-            device), labeled_weak_mask.to(device)
-        try:
-            pass
-            # unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
-        except:
-            pass
-            # unlabeled_dataLoader_ = iter(unlabeled_dataLoader)
-            # unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
-        unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
-
-        # skip those with no foreground masks
-        # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
-        #     continue
-
-        for i in range(1):
-            net.update((labeled_img, labeled_mask),
-                       (unlabeled_img, unlabeled_mask))
-            # net.show_labeled_pair()
-            # net.show_ublabel_image()
-            net.show_gamma()
-            # net.show_u()
-            print()
-        net.reset()
+            continue
 
 
 if __name__ == "__main__":
