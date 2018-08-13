@@ -54,8 +54,11 @@ mask_transform = transforms.Compose([
 
 train_set = medicalDataLoader.MedicalImageDataset('train', data_dir, transform=transform, mask_transform=mask_transform,
                                                   augment=True, equalize=False)
+train_loader = DataLoader(train_set,batch_size= batch_size, shuffle= True, num_workers= num_workers)
+
 val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=transform, mask_transform=mask_transform,
                                                 equalize=False)
+
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
 val_iou_tables = []
 
@@ -72,6 +75,7 @@ def val(val_dataloader, network):
         predicted_mask = proba.max(1)[1]
         iou = dice_loss(predicted_mask, mask).item()
         dice_meter.add(iou)
+    network.train()
     print('val iou:  %.6f' % dice_meter.value()[0])
     return dice_meter.value()[0]
 
@@ -81,8 +85,18 @@ def main():
     neural_net.to(device)
     net = networks(neural_net, lowerbound=50, upperbound=2000)
     plt.ion()
-    # labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)
-    for iteration in tqdm(range(50000)):
+    for epoch in tqdm(range(max_epoch)):
+
+        for i, (img, full_mask, weak_mask, _) in tqdm(enumerate(train_loader)):
+            if weak_mask.sum() <= 0 or full_mask.sum() <= 0:
+                continue
+            img, full_mask, weak_mask = img.to(device), full_mask.to(device), weak_mask.to(device)
+
+            for j in range(50):
+                net.update((img,weak_mask))
+                net.show_gamma()
+            net.reset()
+
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
 
