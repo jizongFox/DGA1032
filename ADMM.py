@@ -27,8 +27,8 @@ class networks(object):
         self.p_u = 1.0
         self.p_v = 1.0
         self.lamda = 8
-        self.sigma = 0.02
-        self.kernelsize = 5
+        self.sigma = 2
+        self.kernelsize = 7
         self.initial_kernel()
 
     def initial_kernel(self):
@@ -46,9 +46,9 @@ class networks(object):
         self.uimage_output = self.neural_net(uimage)
 
         ## a proof-of-concept way
-        self.mask_size = self.umask.sum().item()
-        self.lowbound = self.mask_size
-        self.upbound = self.mask_size
+        # self.mask_size = self.umask.sum().item()
+        # self.lowbound = self.mask_size
+        # self.upbound = self.mask_size
 
 
         if self.gamma is None:
@@ -271,7 +271,7 @@ class networks(object):
         plt.subplot(1, 1, 1)
         plt.imshow(self.uimage[0].cpu().data.numpy().squeeze(), cmap='gray')
         # plt.imshow(self.gamma[0])
-        plt.contour(self.umask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=0.2, linewidth=0.001)
+        plt.contour(self.umask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=1)
 
         plt.contour(self.s.squeeze(), level=[0], colors='blue', alpha=0.2, linewidth=0.001)
 
