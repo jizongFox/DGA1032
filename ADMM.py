@@ -174,13 +174,13 @@ class networks(object):
 
     def update_u(self):
 
-        # new_u = self.u + (self.uimage_output[0, 1].cpu().data.numpy() - self.gamma) * 0.01
-        # self.u = new_u
+        new_u = self.u + (self.uimage_output[0, 1].cpu().data.numpy() - self.gamma) * 0.01
+        self.u = new_u
         pass
 
     def update_v(self):
-        # new_v = self.v + (self.uimage_output[0, 1].cpu().data.numpy() - self.s) * 0.001
-        # self.v = new_v
+        new_v = self.v + (self.uimage_output[0, 1].cpu().data.numpy() - self.s) * 0.001
+        self.v = new_v
         pass
 
 
