@@ -32,8 +32,19 @@ def dice_loss(input, target):
     intersection = (iflat * tflat).sum(1)
     # intersection = (iflat == tflat).sum(1)
 
-    return ((2. * intersection + smooth).float() /  (iflat.sum(1) + tflat.sum(1) + smooth).float()).mean()
-    # return ((2. * intersection + smooth).float() / (iflat.size(1)+ tflat.size(1) + smooth)).mean()
+    foregroud_dice = ((2. * intersection + smooth).float() /  (iflat.sum(1) + tflat.sum(1) + smooth).float()).mean()
+
+    input = 1 - input
+    target = 1 - target
+    iflat = input.view(input.size(0),-1)
+    tflat = target.view(input.size(0),-1)
+    intersection = (iflat * tflat).sum(1)
+    # intersection = (iflat == tflat).sum(1)
+
+    background_dice = ((2. * intersection + smooth).float() /  (iflat.sum(1) + tflat.sum(1) + smooth).float()).mean()
+
+    return [background_dice, foregroud_dice]
+
 
 
 class Colorize:

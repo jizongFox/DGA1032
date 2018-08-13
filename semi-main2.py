@@ -39,7 +39,6 @@ batch_size_val = 1
 num_workers = 8
 
 max_epoch = 100
-max_inner_epoch = 1000
 data_dir = 'dataset/ACDC-2D-All'
 
 # broad = Dashboard(server='http://localhost')
@@ -71,19 +70,33 @@ def val(val_dataloader, network):
         image, mask = image.to(device), mask.to(device)
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
-        iou = dice_loss(predicted_mask, mask).item()
-        dice_meter.add(iou)
-        # broad.image(image[0],'image')
-        # broad.image(proba[0],'prediction')
+        iou = dice_loss(predicted_mask, mask)
+        dice_meter.add(np.mean(iou))
+        if i ==0:
+            plt.figure(2)
+            plt.subplot(221)
+            plt.imshow(image[0].cpu().data.numpy().squeeze(),cmap = 'gray')
 
-    print('val iou:  %.6f' % dice_meter.value()[0])
+            plt.subplot(222)
+            plt.imshow(proba[0][1].cpu().data.numpy().squeeze(), cmap = 'gray')
+
+            plt.subplot(223)
+            plt.imshow(predicted_mask[0].cpu().data.numpy().squeeze(), cmap = 'gray')
+
+            plt.subplot(224)
+            plt.imshow(mask[0].cpu().data.numpy().squeeze(), cmap = 'gray')
+            plt.show()
+            plt.pause(0.5)
+
     network.train()
+    print('val iou:  %.6f' % dice_meter.value()[0])
     return dice_meter.value()[0]
 
 @click.command()
-@click.option('--lr',default= 1e-6, help= 'learning rate, default 1e-6')
-@click.option('--b_weight',default=1e-2, help='background weigth when foreground setting to be 1')
+@click.option('--lr',default= 1e-4, help= 'learning rate, default 1e-5')
+@click.option('--b_weight',default=1e-3, help='background weigth when foreground setting to be 1')
 def main(lr, b_weight):
+
     neural_net = Enet(2)
     neural_net.to(device)
     weight = [float(b_weight), 1]
@@ -91,9 +104,9 @@ def main(lr, b_weight):
     optimiser = torch.optim.Adam(neural_net.parameters(),lr =lr,weight_decay=1e-5)
 
     plt.ion()
-    for epoch in tqdm(range(max_epoch)):
+    for epoch in range(max_epoch):
         for i, (img,full_mask,weak_mask,_) in tqdm(enumerate(train_loader)):
-            if weak_mask.sum()<=0:
+            if weak_mask.sum()<=0 or full_mask.sum()<=0:
                 continue
             img, full_mask, weak_mask = img.to(device), full_mask.to(device), weak_mask.to(device)
 
@@ -102,9 +115,30 @@ def main(lr, b_weight):
             optimiser.zero_grad()
             loss.backward()
             optimiser.step()
+            '''
+            if i %10==0:
+                plt.figure(1)
+                plt.clf()
+                plt.subplot(221)
+                plt.imshow(img[0].cpu().data.numpy().squeeze(), cmap='gray')
+
+                plt.subplot(222)
+                plt.imshow(F.softmax(score,dim=1)[0][1].cpu().data.numpy().squeeze(), cmap='gray')
+
+                plt.subplot(223)
+                plt.imshow(score.max(1)[1][0].cpu().data.numpy().squeeze(), cmap='gray')
+
+                plt.subplot(224)
+                plt.imshow(full_mask[0].cpu().data.numpy().squeeze(), cmap='gray')
+                plt.contour(weak_mask[0].cpu().data.numpy().squeeze(),levels=[0])
+                plt.show()
+                plt.pause(0.5)
+            '''
+
         val_iou = val(val_loader, neural_net)
         val_iou_tables.append(val_iou)
-        print(epoch,': ',val_iou)
+
+        print(epoch,': ',' lr:',float(lr),' bw:',b_weight,'  :',val_iou)
         try:
             pd.Series(val_iou_tables).to_csv('val_iou_lr_%f_bw_%f.csv'%(lr,b_weight))
         except:
