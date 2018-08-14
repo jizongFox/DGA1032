@@ -86,16 +86,16 @@ def main():
     net = networks(neural_net, lowerbound=50, upperbound=2000)
     plt.ion()
     for epoch in tqdm(range(max_epoch)):
-
         for i, (img, full_mask, weak_mask, _) in tqdm(enumerate(train_loader)):
             if weak_mask.sum() <= 0 or full_mask.sum() <= 0:
                 continue
             img, full_mask, weak_mask = img.to(device), full_mask.to(device), weak_mask.to(device)
 
-            for j in range(50):
-                net.update((img,weak_mask))
+            for j in range(10):
+                net.update((img,weak_mask),full_mask)
                 net.show_gamma()
             net.reset()
+        val(net.neural_net, val_loader)
 
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
@@ -103,41 +103,7 @@ def main():
         # if (iteration + 1) % 100 == 0:
         #     val_iou = val(val_loader, net.neural_net)
         #     val_iou_tables.append(val_iou)
-        try:
-            pd.Series(val_iou_tables).to_csv('val_iou.csv')
-        except:
-            pass
 
-        try:
-            pass
-            # labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
-        except:
-            pass
-            # labeled_dataLoader_ = iter(labeled_dataLoader)
-            # labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
-        labeled_img, labeled_mask, labeled_weak_mask = labeled_img.to(device), labeled_mask.to(
-            device), labeled_weak_mask.to(device)
-        try:
-            pass
-            # unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
-        except:
-            pass
-            # unlabeled_dataLoader_ = iter(unlabeled_dataLoader)
-            # unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
-        unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
-
-        # skip those with no foreground masks
-        # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
-        #     continue
-
-        for i in range(1):
-            net.update((labeled_img, labeled_mask),
-                       (unlabeled_img, unlabeled_mask))
-            # net.show_labeled_pair()
-            net.show_ublabel_image()
-            net.show_gamma()
-            # net.show_u()
-        net.reset()
 
 
 if __name__ == "__main__":

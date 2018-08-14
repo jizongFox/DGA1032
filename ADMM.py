@@ -26,9 +26,9 @@ class networks(object):
         self.CEloss_criterion = CrossEntropyLoss2d(torch.Tensor([0,1]).float()).cuda()
         self.p_u = 1.0
         self.p_v = 1.0
-        self.lamda = 10
+        self.lamda = 1
         # self.set_bound=False
-        self.sigma = 0.02
+        self.sigma = .02
         self.kernelsize=7
         self.initial_kernel()
 
@@ -119,8 +119,13 @@ class networks(object):
         unary_term_gamma_1 = np.multiply(
             (0.5 - (F.softmax(self.image_output, dim=1).cpu().data.numpy()[:, 1, :, :] + self.u)),
             1)
-        unary_term_gamma_1 = np.ones(unary_term_gamma_1.shape)
+        # unary_term_gamma_1 = np.ones(unary_term_gamma_1.shape)
         unary_term_gamma_1 [(self.weak_mask.squeeze(dim=1).cpu().data.numpy()==1).astype(bool)]= -np.inf
+
+        unary_term_gamma_1[0][0:20] = np.inf
+        unary_term_gamma_1[0][-20:-1] = np.inf
+        unary_term_gamma_1[0][:,0:20] = np.inf
+        unary_term_gamma_1[0][:,-20:-1] = np.inf
 
         unary_term_gamma_0 = np.zeros(unary_term_gamma_1.shape)
         new_gamma = np.zeros(self.gamma.shape)
@@ -164,13 +169,14 @@ class networks(object):
     def update_u(self):
 
         # new_u = self.u + (F.softmax(self.uimage_output, dim=1)[:, 1, :, :].cpu().data.numpy() - self.gamma)
-        # new_u = self.u + (self.heatmap2segmentation(self.uimage_output).cpu().data.numpy() - self.gamma)
+        new_u = self.u + (self.heatmap2segmentation(self.image_output).cpu().data.numpy() - self.gamma)*0.01
         # assert new_u.shape == self.u.shape
-        # self.u = new_u
+        self.u = new_u
         pass
 
-    def update(self, image_pair):
+    def update(self, image_pair,full_mask):
         [image,weak_mask] =image_pair
+        self.full_mask = full_mask
         self.image_forward(image, weak_mask)
         self.update_s()
         self.update_gamma()
@@ -230,6 +236,8 @@ class networks(object):
         plt.imshow(self.image[0].cpu().data.numpy().squeeze(), cmap='gray')
         # plt.imshow(self.gamma[0])
         plt.contour(self.weak_mask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=0.2, linewidth=0.001,label = 'GT')
+        plt.contour(self.full_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,label = 'GT')
+
 
 
 
