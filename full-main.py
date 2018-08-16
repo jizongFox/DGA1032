@@ -12,11 +12,12 @@ warnings.filterwarnings('ignore')
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from utils.criterion import CrossEntropyLoss2d
 import utils.medicalDataLoader as medicalDataLoader
-from ADMM import networks
 from utils.enet import Enet
 
 from utils.utils import Colorize, dice_loss
@@ -28,19 +29,17 @@ np.random.seed(2)
 
 use_gpu = True
 # device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
-device = torch.device('cuda')
+device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torch.device('cpu')
 cuda_device = "0"
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
-batch_size = 1
+batch_size = 4
 batch_size_val = 1
 num_workers = 4
 lr = 0.001
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'
 
-size_min = 5
-size_max = 20
 
 color_transform = Colorize()
 transform = transforms.Compose([
@@ -68,8 +67,6 @@ def val(val_dataloader, network):
     dice_meter = AverageValueMeter()
     dice_meter.reset()
     for i, (image, mask, _, _) in enumerate(val_dataloader):
-        # if mask.sum()<=500:
-        #     continue
         image, mask = image.to(device), mask.to(device)
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
@@ -83,26 +80,27 @@ def val(val_dataloader, network):
 def main():
     neural_net = Enet(2)
     neural_net.to(device)
-    net = networks(neural_net, lowerbound=50, upperbound=2000)
+    criterion = CrossEntropyLoss2d()
+    optimizer = torch.optim.Adam(params=neural_net.parameters(), lr = 1e-4, weight_decay=1e-5)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[20,40,60,80],gamma=0.25)
+    trainloss_meter = AverageValueMeter()
     plt.ion()
     for epoch in tqdm(range(max_epoch)):
-        for i, (img, full_mask, weak_mask, _) in tqdm(enumerate(train_loader)):
-            if weak_mask.sum() <= 0 or full_mask.sum() <= 0:
-                continue
-            img, full_mask, weak_mask = img.to(device), full_mask.to(device), weak_mask.to(device)
+        trainloss_meter.reset()
+        scheduler.step()
+        for i, (img, full_mask,_, _) in tqdm(enumerate(train_loader)):
+            img, full_mask = img.to(device), full_mask.to(device)
+            optimizer.zero_grad()
+            output = neural_net(img)
+            loss = criterion(output,full_mask.squeeze(1))
+            loss.backward()
+            optimizer.step()
+            trainloss_meter.add(loss.item())
+        print('%d epoch: training loss is: %.5f'%(epoch,trainloss_meter.value()[0]))
 
-            for j in range(10):
-                net.update((img,weak_mask),full_mask)
-                net.show_gamma()
-            net.reset()
-        val(net.neural_net, val_loader)
 
-        # choose randomly a batch of image from labeled dataset and unlabeled dataset.
-        # Initialize the ADMM dummy variables for one-batch training
+        val(neural_net, val_loader)
 
-        # if (iteration + 1) % 100 == 0:
-        #     val_iou = val(val_loader, net.neural_net)
-        #     val_iou_tables.append(val_iou)
 
 
 
