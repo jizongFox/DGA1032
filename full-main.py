@@ -72,7 +72,7 @@ def val(val_dataloader, network):
         iou = dice_loss(predicted_mask, mask).item()
         dice_meter.add(iou)
     network.train()
-    print('val iou:  %.6f' % dice_meter.value()[0])
+    print('new val iou:  %.6f' % dice_meter.value()[0])
     return dice_meter.value()[0]
 
 
