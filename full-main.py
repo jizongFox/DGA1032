@@ -63,18 +63,23 @@ val_iou_tables = []
 
 def val(val_dataloader, network):
     network.eval()
-    dice_meter = AverageValueMeter()
-    dice_meter.reset()
+    dice_meter_b = AverageValueMeter()
+    dice_meter_f = AverageValueMeter()
+
+    dice_meter_b.reset()
+    dice_meter_f.reset()
+
     for i, (image, mask, _, _) in enumerate(val_dataloader):
         image, mask = image.to(device), mask.to(device)
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
         iou = dice_loss(predicted_mask, mask)
-        dice_meter.add(iou[1])
+        dice_meter_f.add(iou[1])
+        dice_meter_b.add(iou[0])
 
     network.train()
-    print('\nval iou:  %.6f' % dice_meter.value()[0])
-    return dice_meter.value()[0]
+    print('\nval iou:  %.6f' % dice_meter_f.value()[0])
+    return [dice_meter_b.value()[0], dice_meter_f.value()[0]]
 
 
 def main():
