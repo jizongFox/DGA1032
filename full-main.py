@@ -59,6 +59,7 @@ val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=trans
 
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
 val_iou_tables = []
+train_iou_tables = []
 
 
 def val(val_dataloader, network):
@@ -68,18 +69,18 @@ def val(val_dataloader, network):
 
     dice_meter_b.reset()
     dice_meter_f.reset()
+    with torch.no_grad():
+        for i, (image, mask, _, _) in enumerate(val_dataloader):
+            image, mask = image.to(device), mask.to(device)
+            proba = F.softmax(network(image), dim=1)
+            predicted_mask = proba.max(1)[1]
+            iou = dice_loss(predicted_mask, mask)
 
-    for i, (image, mask, _, _) in enumerate(val_dataloader):
-        image, mask = image.to(device), mask.to(device)
-        proba = F.softmax(network(image), dim=1)
-        predicted_mask = proba.max(1)[1]
-        iou = dice_loss(predicted_mask, mask)
-
-        dice_meter_f.add(iou[1])
-        dice_meter_b.add(iou[0])
+            dice_meter_f.add(iou[1])
+            dice_meter_b.add(iou[0])
 
     network.train()
-    print('\nval iou:  %.6f' % dice_meter_f.value()[0])
+    # print('\nval iou:  %.6f' % dice_meter_f.value()[0])
     return [dice_meter_b.value()[0], dice_meter_f.value()[0]]
 
 
@@ -87,14 +88,12 @@ def main():
     neural_net = Enet(2)
     neural_net.to(device)
     criterion = CrossEntropyLoss2d()
-    optimizer = torch.optim.Adam(params=neural_net.parameters(), lr = 1e-4, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(params=neural_net.parameters(), lr=1e-3, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[20,40,60,80],gamma=0.25)
-    trainloss_meter = AverageValueMeter()
     highest_iou = -1
 
     plt.ion()
     for epoch in tqdm(range(max_epoch)):
-        trainloss_meter.reset()
         scheduler.step()
         for param_group in optimizer.param_groups:
             _lr = param_group['lr']
@@ -105,18 +104,23 @@ def main():
             loss = criterion(output,full_mask.squeeze(1))
             loss.backward()
             optimizer.step()
-            trainloss_meter.add(loss.item())
-        print(
-            '\n%d epoch: training loss is: %.5f, with learning rate of %.6f' % (epoch, trainloss_meter.value()[0], _lr))
 
-        ious = val(val_loader, neural_net)
-        val_iou_tables.append(ious)
+        ## evaluate the model:
+        train_ious = val(train_loader, neural_net)
+        train_iou_tables.append(train_ious)
+        val_ious = val(val_loader, neural_net)
+        val_iou_tables.append(val_ious)
+        print(
+            '\n%d epoch: training fiou is: %.5f and val fiou is %.5f, with learning rate of %.6f' % (
+            epoch, train_ious[1], val_ious[1], _lr))
+
         try:
+            pd.DataFrame(train_iou_tables).to_csv('train.csv', columns=['background', 'foregound'])
             pd.DataFrame(val_iou_tables).to_csv('val.csv', columns=['background', 'foregound'])
         except:
             continue
 
-        if ious[1] > highest_iou:
+        if val_ious[1] > highest_iou:
             torch.save(neural_net.state_dict(), 'checkpoint/pretrained_%.5f.pth' % ious[1])
 
 
