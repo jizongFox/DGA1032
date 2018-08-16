@@ -23,7 +23,8 @@ from utils.enet import Enet
 from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
 from tqdm import tqdm
-
+from utils.visualize import Dashboard
+import click
 
 
 use_gpu = True
@@ -32,10 +33,9 @@ device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torc
 cuda_device = "0"
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
-batch_size = 4
+batch_size = 6
 batch_size_val = 1
-num_workers = 4
-lr = 0.001
+num_workers = 7
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'
 
@@ -62,6 +62,11 @@ val_iou_tables = []
 train_iou_tables = []
 
 
+# train_broad=Dashboard(env='training')
+# val_broad=Dashboard(env='eval')
+
+
+
 def val(val_dataloader, network):
     network.eval()
     dice_meter_b = AverageValueMeter()
@@ -79,16 +84,19 @@ def val(val_dataloader, network):
             dice_meter_f.add(iou[1])
             dice_meter_b.add(iou[0])
 
+
     network.train()
     # print('\nval iou:  %.6f' % dice_meter_f.value()[0])
     return [dice_meter_b.value()[0], dice_meter_f.value()[0]]
 
 
-def main():
+@click.command()
+@click.option('--lr', default=1e-4, help='learning rate')
+def main(lr):
     neural_net = Enet(2)
     neural_net.to(device)
     criterion = CrossEntropyLoss2d()
-    optimizer = torch.optim.Adam(params=neural_net.parameters(), lr=1e-3, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(params=neural_net.parameters(), lr=lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[20,40,60,80],gamma=0.25)
     highest_iou = -1
 
@@ -107,21 +115,27 @@ def main():
 
         ## evaluate the model:
         train_ious = val(train_loader, neural_net)
+        train_ious.insert(0, _lr)
         train_iou_tables.append(train_ious)
         val_ious = val(val_loader, neural_net)
+        val_ious.insert(0, _lr)
         val_iou_tables.append(val_ious)
         print(
             '\n%d epoch: training fiou is: %.5f and val fiou is %.5f, with learning rate of %.6f' % (
             epoch, train_ious[1], val_ious[1], _lr))
 
         try:
-            pd.DataFrame(train_iou_tables).to_csv('train.csv', columns=['background', 'foregound'])
-            pd.DataFrame(val_iou_tables).to_csv('val.csv', columns=['background', 'foregound'])
-        except:
-            continue
+            pd.DataFrame(train_iou_tables, columns=['learning rate', 'background', 'foregound']).to_csv(
+                'results/train_lr_%f.csv' % lr)
+            pd.DataFrame(val_iou_tables, columns=['learning rate', 'background', 'foregound']).to_csv(
+                'results/val_lr_%f.csv' % lr)
+        except Exception as e:
+            print(e)
 
-        if val_ious[1] > highest_iou:
-            torch.save(neural_net.state_dict(), 'checkpoint/pretrained_%.5f.pth' % ious[1])
+        if val_ious[2] > highest_iou:
+            print('The highest val fiou is %f' % val_ious[2])
+            highest_iou = val_ious[2]
+            torch.save(neural_net.state_dict(), 'checkpoint/pretrained_%.5f.pth' % val_ious[2])
 
 
 
