@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import matplotlib.pyplot as plt
-import numpy as np
+import numpy as np, pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -103,7 +103,14 @@ def main():
         print('%d epoch: training loss is: %.5f, with learning rate of %.6f' % (epoch, trainloss_meter.value()[0], _lr))
 
         ious = val(val_loader, neural_net)
+        import ipdb
+        ipdb.set_trace()
         val_iou_tables.append(ious)
+        try:
+            pd.Series(val_iou_tables).to_csv('val.csv')
+        except:
+            continue
+
         if ious[1] > highest_iou:
             torch.save(neural_net.parameters(), 'checkpoint/pretrained_%.5f.pth' % ious[1])
 
