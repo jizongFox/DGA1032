@@ -69,7 +69,7 @@ def val(val_dataloader, network):
         image, mask = image.to(device), mask.to(device)
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
-        iou = dice_loss(predicted_mask, mask).item()
+        iou = dice_loss(predicted_mask, mask)
         dice_meter.add(iou[1])
 
     network.train()
@@ -84,6 +84,8 @@ def main():
     optimizer = torch.optim.Adam(params=neural_net.parameters(), lr = 1e-4, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[20,40,60,80],gamma=0.25)
     trainloss_meter = AverageValueMeter()
+    highest_iou = -1
+
     plt.ion()
     for epoch in tqdm(range(max_epoch)):
         trainloss_meter.reset()
@@ -102,6 +104,7 @@ def main():
 
         ious = val(val_loader, neural_net)
         val_iou_tables.append(ious)
+        if ious[]
 
 
 
