@@ -26,8 +26,8 @@ torch.manual_seed(7)
 np.random.seed(2)
 
 use_gpu = True
-# device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
-device = torch.device('cuda')
+device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torch.device('cpu')
+
 cuda_device = "0"
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
