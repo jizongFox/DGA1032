@@ -24,8 +24,7 @@ from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
 from tqdm import tqdm
 
-torch.manual_seed(7)
-np.random.seed(2)
+
 
 use_gpu = True
 # device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
@@ -88,6 +87,8 @@ def main():
     for epoch in tqdm(range(max_epoch)):
         trainloss_meter.reset()
         scheduler.step()
+        for param_group in optimizer.param_groups:
+            _lr = param_group['lr']
         for i, (img, full_mask,_, _) in tqdm(enumerate(train_loader)):
             img, full_mask = img.to(device), full_mask.to(device)
             optimizer.zero_grad()
@@ -96,10 +97,10 @@ def main():
             loss.backward()
             optimizer.step()
             trainloss_meter.add(loss.item())
-        print('%d epoch: training loss is: %.5f'%(epoch,trainloss_meter.value()[0]))
+        print('%d epoch: training loss is: %.5f, with learning rate of %.6f' % (epoch, trainloss_meter.value()[0], _lr))
 
 
-        val(neural_net, val_loader)
+        val(val_loader,neural_net)
 
 
 
