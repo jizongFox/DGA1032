@@ -25,14 +25,14 @@ def pred2segmentation(prediction):
 
 def dice_loss(input, target):
     # with torch.no_grad:
-    smooth = 1.
+    smooth = 1
 
     iflat = input.view(input.size(0),-1)
     tflat = target.view(input.size(0),-1)
     intersection = (iflat * tflat).sum(1)
-    # intersection = (iflat == tflat).sum(1)
 
-    foregroud_iou = ((2. * intersection + smooth).float() / (iflat.sum(1) + tflat.sum(1) + smooth).float()).mean()
+    foregroud_iou = float(
+        ((2. * intersection + smooth).float() / (iflat.sum(1) + tflat.sum(1) + smooth).float()).mean())
     # return ((2. * intersection + smooth).float() / (iflat.size(1)+ tflat.size(1) + smooth)).mean()
 
     iflat = 1 - input.view(input.size(0), -1)
@@ -40,7 +40,8 @@ def dice_loss(input, target):
     intersection = (iflat * tflat).sum(1)
     # intersection = (iflat == tflat).sum(1)
 
-    backgroud_iou = ((2. * intersection + smooth).float() / (iflat.sum(1) + tflat.sum(1) + smooth).float()).mean()
+    backgroud_iou = float(
+        ((2. * intersection + smooth).float() / (iflat.sum(1) + tflat.sum(1) + smooth).float()).mean())
     return [backgroud_iou, foregroud_iou]
 
 

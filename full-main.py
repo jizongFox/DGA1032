@@ -74,12 +74,13 @@ def val(val_dataloader, network):
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
         iou = dice_loss(predicted_mask, mask)
+
         dice_meter_f.add(iou[1])
         dice_meter_b.add(iou[0])
 
     network.train()
     print('\nval iou:  %.6f' % dice_meter_f.value()[0])
-    return [dice_meter_b.value()[0].item(), dice_meter_f.value()[0].item()]
+    return [dice_meter_b.value()[0], dice_meter_f.value()[0]]
 
 
 def main():
@@ -105,19 +106,18 @@ def main():
             loss.backward()
             optimizer.step()
             trainloss_meter.add(loss.item())
-        print('%d epoch: training loss is: %.5f, with learning rate of %.6f' % (epoch, trainloss_meter.value()[0], _lr))
+        print(
+            '\n%d epoch: training loss is: %.5f, with learning rate of %.6f' % (epoch, trainloss_meter.value()[0], _lr))
 
         ious = val(val_loader, neural_net)
-        import ipdb
-        ipdb.set_trace()
         val_iou_tables.append(ious)
         try:
-            pd.Series(val_iou_tables).to_csv('val.csv')
+            pd.DataFrame(val_iou_tables).to_csv('val.csv', columns=['background', 'foregound'])
         except:
             continue
 
         if ious[1] > highest_iou:
-            torch.save(neural_net.parameters(), 'checkpoint/pretrained_%.5f.pth' % ious[1])
+            torch.save(neural_net.state_dict(), 'checkpoint/pretrained_%.5f.pth' % ious[1])
 
 
 
