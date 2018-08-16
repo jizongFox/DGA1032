@@ -70,7 +70,8 @@ def val(val_dataloader, network):
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
         iou = dice_loss(predicted_mask, mask).item()
-        dice_meter.add(iou)
+        dice_meter.add(iou[1])
+
     network.train()
     print('\nval iou:  %.6f' % dice_meter.value()[0])
     return dice_meter.value()[0]
@@ -99,8 +100,9 @@ def main():
             trainloss_meter.add(loss.item())
         print('%d epoch: training loss is: %.5f, with learning rate of %.6f' % (epoch, trainloss_meter.value()[0], _lr))
 
+        ious = val(val_loader, neural_net)
+        val_iou_tables.append(ious)
 
-        val(val_loader,neural_net)
 
 
 
