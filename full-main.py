@@ -104,7 +104,8 @@ def main():
 
         ious = val(val_loader, neural_net)
         val_iou_tables.append(ious)
-        if ious[]
+        if ious[1] > highest_iou:
+            torch.save(neural_net.parameters(), 'checkpoint/pretrained_%.5f.pth' % ious[1])
 
 
 
