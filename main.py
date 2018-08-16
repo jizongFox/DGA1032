@@ -102,7 +102,7 @@ def main():
     neural_net = Enet(2)
 
     # Uncomment the following line to pretrain the model with few fully labeled data.
-    # pretrain(labeled_dataLoader,val_loader,neural_net,)
+    pretrain(labeled_dataLoader,val_loader,neural_net,)
 
     map_location = lambda storage, loc: storage
 
