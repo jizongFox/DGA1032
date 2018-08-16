@@ -79,7 +79,7 @@ def val(val_dataloader, network):
 
     network.train()
     print('\nval iou:  %.6f' % dice_meter_f.value()[0])
-    return [dice_meter_b.value()[0], dice_meter_f.value()[0]]
+    return [dice_meter_b.value()[0].item(), dice_meter_f.value()[0].item()]
 
 
 def main():
