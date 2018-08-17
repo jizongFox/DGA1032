@@ -31,7 +31,7 @@ device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torc
 cuda_device = "0"
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
-batch_size = 1
+batch_size = 4
 batch_size_val = 1
 num_workers = 4
 lr = 0.001
@@ -64,8 +64,7 @@ def val(val_dataloader, network):
     dice_meter = AverageValueMeter()
     dice_meter.reset()
     for i, (image, mask, _, _) in enumerate(val_dataloader):
-        # if mask.sum()<=500:
-        #     continue
+
         image, mask = image.to(device), mask.to(device)
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
@@ -75,9 +74,11 @@ def val(val_dataloader, network):
     return dice_meter.value()[0]
 
 
+
+
 def main():
     # Here we have to split the fully annotated dataset and unannotated dataset
-    split_ratio = 0.1
+    split_ratio = 0.05
     random_index = np.random.permutation(len(train_set))
     labeled_dataset = copy.deepcopy(train_set)
     labeled_dataset.imgs = [train_set.imgs[x]
@@ -102,7 +103,7 @@ def main():
     neural_net = Enet(2)
 
     # Uncomment the following line to pretrain the model with few fully labeled data.
-    pretrain(labeled_dataLoader,val_loader,neural_net,)
+    # pretrain(labeled_dataLoader,val_loader,neural_net,)
 
     map_location = lambda storage, loc: storage
 
@@ -127,7 +128,6 @@ def main():
             pd.Series(val_iou_tables).to_csv('val_iou.csv')
         except:
             pass
-
         try:
             labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
         except:
@@ -149,7 +149,6 @@ def main():
         for i in range(20):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
-            # net.show_labeled_pair()
             # net.show_ublabel_image()
             net.show_gamma()
             # net.show_u()
