@@ -6,7 +6,9 @@ import torch.nn.functional as F
 
 from utils.network import UNet
 from utils.criterion import CrossEntropyLoss2d
-
+use_gpu = True
+# device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
+device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torch.device('cpu')
 
 class networks(object):
     '''
@@ -23,7 +25,7 @@ class networks(object):
         self.neural_net = neural_network
         self.reset()
         self.optimiser = torch.optim.Adam(self.neural_net.parameters(), lr=0.001)
-        self.CEloss_criterion = CrossEntropyLoss2d(torch.Tensor([0,1]).float()).cuda()
+        self.CEloss_criterion = CrossEntropyLoss2d(torch.Tensor([0,1]).float()).to(device)
         self.p_u = 1.0
         self.p_v = 1.0
         self.lamda = 1
@@ -70,8 +72,8 @@ class networks(object):
 
         for i in range(5):
             CE_loss = self.CEloss_criterion(self.image_output, self.weak_mask.squeeze(1))
-            unlabled_loss = self.p_v /2 *(F.softmax(self.image_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().cuda()).norm(p=2) ** 2\
-                +self.p_u / 2 * (F.softmax(self.image_output, dim=1)[:, 1] + torch.from_numpy(-self.gamma+self.u).float().cuda()).norm(p=2) ** 2
+            unlabled_loss = self.p_v /2 *(F.softmax(self.image_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().to(device)).norm(p=2) ** 2\
+                +self.p_u / 2 * (F.softmax(self.image_output, dim=1)[:, 1] + torch.from_numpy(-self.gamma+self.u).float().to(device)).norm(p=2) ** 2
 
             unlabled_loss /=list(self.image_output.reshape(-1).size())[0]
 
