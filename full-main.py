@@ -33,6 +33,7 @@ num_workers = 7
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'
 
+
 color_transform = Colorize()
 transform = transforms.Compose([
     transforms.Resize((200, 200)),
@@ -68,6 +69,7 @@ def val(val_dataloader, network):
     dice_meter_f.reset()
     with torch.no_grad():
         for i, (image, mask, _, _) in enumerate(val_dataloader):
+            if mask.sum() == 0: continue;
             image, mask = image.to(device), mask.to(device)
             proba = F.softmax(network(image), dim=1)
             predicted_mask = proba.max(1)[1]
@@ -96,6 +98,7 @@ def main(lr):
         for param_group in optimizer.param_groups:
             _lr = param_group['lr']
         for i, (img, full_mask, _, _) in enumerate(train_loader):
+            if full_mask.sum() == 0: continue;
             img, full_mask = img.to(device), full_mask.to(device)
             optimizer.zero_grad()
             output = neural_net(img)
@@ -116,9 +119,9 @@ def main(lr):
 
         try:
             pd.DataFrame(train_iou_tables, columns=['learning rate', 'background', 'foregound']).to_csv(
-                'results/train_lr_%f.csv' % lr)
+                'results/withoutnull_image_train_lr_%f.csv' % lr)
             pd.DataFrame(val_iou_tables, columns=['learning rate', 'background', 'foregound']).to_csv(
-                'results/val_lr_%f.csv' % lr)
+                'results/withoutnull_image_val_lr_%f.csv' % lr)
         except Exception as e:
             print(e)
 
