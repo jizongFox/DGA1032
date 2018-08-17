@@ -146,7 +146,7 @@ def main():
         # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
         #     continue
 
-        for i in range(20):
+        for i in range(2):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             # net.show_ublabel_image()
