@@ -17,7 +17,8 @@ from torchvision import transforms
 from utils.criterion import CrossEntropyLoss2d
 import utils.medicalDataLoader as medicalDataLoader
 from utils.enet import Enet
-
+from tqdm import tqdm
+from utils.visualize import Dashboard
 from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
 import click
@@ -29,7 +30,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
 batch_size = 6
 batch_size_val = 1
-num_workers = 7
+num_workers = 6
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'
 
@@ -55,12 +56,11 @@ val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_work
 val_iou_tables = []
 train_iou_tables = []
 
+train_broad = Dashboard(env='training', server='http://localhost')
+val_broad = Dashboard(env='eval', server='http://localhost')
 
-# train_broad=Dashboard(env='training')
-# val_broad=Dashboard(env='eval')
 
-
-def val(val_dataloader, network):
+def val(val_dataloader, network, board=False, enable_skip=False):
     network.eval()
     dice_meter_b = AverageValueMeter()
     dice_meter_f = AverageValueMeter()
@@ -69,25 +69,30 @@ def val(val_dataloader, network):
     dice_meter_f.reset()
     with torch.no_grad():
         for i, (image, mask, _, _) in enumerate(val_dataloader):
-            if mask.sum() == 0: continue;
+            if enable_skip and mask.sum() == 0: continue;
             image, mask = image.to(device), mask.to(device)
+
             proba = F.softmax(network(image), dim=1)
             predicted_mask = proba.max(1)[1]
             iou = dice_loss(predicted_mask, mask)
 
             dice_meter_f.add(iou[1])
             dice_meter_b.add(iou[0])
+            if board and i % 10 == 0:
+                board.image(image[0], 'medical image')
+                board.image(color_transform(mask[0]), 'weak_mask')
+                board.image(color_transform(predicted_mask[0]), 'prediction')
 
     network.train()
     return [dice_meter_b.value()[0], dice_meter_f.value()[0]]
 
 
 @click.command()
-@click.option('--lr', default=1e-4, help='learning rate')
+@click.option('--lr', default=5e-3, help='learning rate')
 def main(lr):
     neural_net = Enet(2)
     neural_net.to(device)
-    criterion = CrossEntropyLoss2d()
+    criterion = CrossEntropyLoss2d(weight=torch.Tensor([0.5, 2])).to(device)
     optimizer = torch.optim.Adam(params=neural_net.parameters(), lr=lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40, 60, 80], gamma=0.25)
     highest_iou = -1
@@ -97,7 +102,7 @@ def main(lr):
         scheduler.step()
         for param_group in optimizer.param_groups:
             _lr = param_group['lr']
-        for i, (img, full_mask, _, _) in enumerate(train_loader):
+        for i, (img, full_mask, _, _) in tqdm(enumerate(train_loader)):
             if full_mask.sum() == 0: continue;
             img, full_mask = img.to(device), full_mask.to(device)
             optimizer.zero_grad()
@@ -107,21 +112,21 @@ def main(lr):
             optimizer.step()
 
         ## evaluate the model:
-        train_ious = val(train_loader, neural_net)
+        train_ious = val(train_loader, neural_net, enable_skip=True, board=train_broad)
         train_ious.insert(0, _lr)
         train_iou_tables.append(train_ious)
-        val_ious = val(val_loader, neural_net)
+        val_ious = val(val_loader, neural_net, enable_skip=True, board=val_broad)
         val_ious.insert(0, _lr)
         val_iou_tables.append(val_ious)
         print(
-            '\n%d epoch: training fiou is: %.5f and val fiou is %.5f, with learning rate of %.6f' % (
+            '%d epoch: training fiou is: %.5f and val fiou is %.5f, with learning rate of %.6f' % (
                 epoch, train_ious[2], val_ious[2], _lr))
 
         try:
             pd.DataFrame(train_iou_tables, columns=['learning rate', 'background', 'foregound']).to_csv(
-                'results/withoutnull_image_train_lr_%f.csv' % lr)
+                'results/3channels_train_lr_%f.csv' % lr)
             pd.DataFrame(val_iou_tables, columns=['learning rate', 'background', 'foregound']).to_csv(
-                'results/withoutnull_image_val_lr_%f.csv' % lr)
+                'results/3channels_val_lr_%f.csv' % lr)
         except Exception as e:
             print(e)
 

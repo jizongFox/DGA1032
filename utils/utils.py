@@ -25,7 +25,7 @@ def pred2segmentation(prediction):
 
 def dice_loss(input, target):
     # with torch.no_grad:
-    smooth = 1
+    smooth = 1.0
 
     iflat = input.view(input.size(0),-1)
     tflat = target.view(input.size(0),-1)
