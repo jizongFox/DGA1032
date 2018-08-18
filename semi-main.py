@@ -110,7 +110,7 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound, saved_name):
     net = networks(neural_net, lowerbound=lowbound, upperbound=highbound, lamda=lamda, sigma=sigma,
                    kernelsize=kernelsize)
     labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)
-    for iteration in tqdm(range(50000)):
+    for iteration in tqdm(range(10000)):
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
 
