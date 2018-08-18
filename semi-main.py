@@ -32,9 +32,9 @@ device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torc
 # cuda_device = "0"
 # os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
-batch_size = 4
+batch_size = 1
 batch_size_val = 1
-num_workers = 4
+num_workers = 0
 lr = 0.001
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'
@@ -118,7 +118,7 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound):
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
         # Initialize the ADMM dummy variables for one-batch training
 
-        if (iteration + 1) % 1255 == 0:
+        if (iteration + 1) % 200 == 0:
             val_iou = val(val_loader, net.neural_net)
             val_iou_tables.append(val_iou)
         try:
@@ -149,7 +149,7 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound):
         for i in range(inneriter):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
-            net.show_gamma()
+            # net.show_gamma()
             # net.show_u()
 
         net.reset()
