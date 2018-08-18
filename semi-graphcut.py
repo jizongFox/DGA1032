@@ -107,6 +107,7 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound, saved_name):
     val_iou_tables.append(val_iou)
 
     plt.ion()
+
     net = networks(neural_net, lowerbound=lowbound, upperbound=highbound, lamda=lamda, sigma=sigma,
                    kernelsize=kernelsize)
     labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)

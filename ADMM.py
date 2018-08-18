@@ -189,11 +189,11 @@ class networks(object):
         [limage, lmask], [uimage, umask] = limage_pair, uimage_pair
         self.limage_forward(limage, lmask)
         self.uimage_forward(uimage, umask)
-        self.update_s()
+        # self.update_s()
         self.update_gamma()
         self.update_theta()
         self.update_u()
-        self.update_v()
+        # self.update_v()
 
     def show_labeled_pair(self):
         fig = plt.figure(1, figsize=(32, 32))
@@ -274,7 +274,7 @@ class networks(object):
         # plt.imshow(self.gamma[0])
         plt.contour(self.umask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=1)
 
-        plt.contour(self.s.squeeze(), level=[0], colors='blue', alpha=0.2, linewidth=0.001)
+        # plt.contour(self.s.squeeze(), level=[0], colors='blue', alpha=0.2, linewidth=0.001)
 
         plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001)
         plt.contour(self.heatmap2segmentation(self.uimage_output).squeeze().cpu().data.numpy(), level=[0],
