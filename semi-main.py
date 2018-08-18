@@ -73,7 +73,7 @@ def val(val_dataloader, network):
 
 @click.command()
 @click.option('--inneriter', default=5, help='iterative time in an inner admm loop')
-@click.option('--lamda', default=1, help='balance between unary and boundary terms')
+@click.option('--lamda', default=1.0, help='balance between unary and boundary terms')
 @click.option('--sigma', default=0.02, help='sigma in the boundary term of the graphcut')
 @click.option('--kernelsize', default=5, help='kernelsize of the graphcut')
 @click.option('--lowbound', default=50, help='lowbound')
