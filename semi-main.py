@@ -136,12 +136,15 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound, saved_name):
             unlabeled_dataLoader_ = iter(unlabeled_dataLoader)
             unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
 
+        # skip those with no foreground masks
+        if labeled_mask.sum() <= 0 or unlabeled_mask.sum() <= 0:
+            continue
         unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
 
         for i in range(inneriter):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
-            net.show_gamma()
+            # net.show_gamma()
         net.reset()
 
 
