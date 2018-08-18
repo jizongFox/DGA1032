@@ -144,7 +144,7 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound, saved_name):
         for i in range(inneriter):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
-            # net.show_gamma()
+            net.show_gamma()
         net.reset()
 
 
