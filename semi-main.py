@@ -21,6 +21,7 @@ from utils.pretrain_network import pretrain
 from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
 from tqdm import tqdm
+import click
 
 torch.manual_seed(7)
 np.random.seed(2)
@@ -75,7 +76,8 @@ def val(val_dataloader, network):
 
 
 
-
+@click.command()
+@click.option()
 def main():
     # Here we have to split the fully annotated dataset and unannotated dataset
     split_ratio = 0.05
@@ -97,7 +99,12 @@ def main():
 
     from utils.pretrain_network import pretrain
 
-    pretrain(labeled_dataLoader, val_loader, neural_net)
+    val_tables = pretrain(labeled_dataLoader, val_loader, neural_net, split_ratio=split_ratio)
+    pd.Series(val_tables).to_csv('split_ratio_%.3f.csv'%split_ratio)
+
+
+
+
     '''
 
     map_location = lambda storage, loc: storage
