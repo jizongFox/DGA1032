@@ -29,7 +29,7 @@ def val(val_dataloader, network):
 def pretrain(train_dataloader, val_dataloader_, network, path=None, split_ratio=0.1):
     highest_iou = -1
     class config:
-        lr = 1e-4
+        lr = 1e-3
         epochs = 100
         path = 'checkpoint'
 
