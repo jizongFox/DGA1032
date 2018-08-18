@@ -82,7 +82,8 @@ def val(val_dataloader, network):
 @click.option('--kernelsize', default=7, help='kernelsize of the graphcut')
 @click.option('--lowbound', default=50, help='lowbound')
 @click.option('--highbound', default=2000, help='highbound')
-def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound):
+@click.option('--saved_name', default='default_iou', help='default_save_name')
+def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound, saved_name):
     # Here we have to split the fully annotated dataset and unannotated dataset
     split_ratio = 0.03
     random_index = np.random.permutation(len(train_set))
@@ -122,7 +123,7 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound):
             val_iou = val(val_loader, net.neural_net)
             val_iou_tables.append(val_iou)
         try:
-            pd.Series(val_iou_tables).to_csv('val_iou.csv')
+            pd.Series(val_iou_tables).to_csv('$s.csv' % saved_name)
         except:
             pass
         try:
