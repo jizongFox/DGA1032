@@ -143,9 +143,6 @@ def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound, saved_name):
 
         unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
 
-        # skip those with no foreground masks
-        # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
-        #     continue
 
         for i in range(inneriter):
             net.update((labeled_img, labeled_mask),
