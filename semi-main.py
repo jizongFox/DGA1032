@@ -76,13 +76,13 @@ def val(val_dataloader, network):
 
 
 @click.command()
-@click.option('--innerIter', default=5, help='iterative time in an inner admm loop')
+@click.option('--inneriter', default=5, help='iterative time in an inner admm loop')
 @click.option('--lamda', default=1, help='balance between unary and boundary terms')
 @click.option('--sigma', default=0.02, help='sigma in the boundary term of the graphcut')
 @click.option('--kernelsize', default=7, help='kernelsize of the graphcut')
 @click.option('--lowbound', default=50, help='lowbound')
 @click.option('--highbound', default=2000, help='highbound')
-def main(innerIter, lamda, sigma, kernelsize, lowbound, highbound):
+def main(inneriter, lamda, sigma, kernelsize, lowbound, highbound):
     # Here we have to split the fully annotated dataset and unannotated dataset
     split_ratio = 0.03
     random_index = np.random.permutation(len(train_set))
@@ -146,7 +146,7 @@ def main(innerIter, lamda, sigma, kernelsize, lowbound, highbound):
         # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
         #     continue
 
-        for i in range(innerIter):
+        for i in range(inneriter):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
             net.show_gamma()
