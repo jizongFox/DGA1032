@@ -75,12 +75,16 @@ def val(val_dataloader, network):
     return dice_meter.value()[0]
 
 
-
 @click.command()
-@click.option('--split_ratio', default=0.05)
-def main(split_ratio):
+@click.option('--innerIter', default=5, help='iterative time in an inner admm loop')
+@click.option('--lamda', default=1, help='balance between unary and boundary terms')
+@click.option('--sigma', default=0.02, help='sigma in the boundary term of the graphcut')
+@click.option('--kernelsize', default=7, help='kernelsize of the graphcut')
+@click.option('--lowbound', default=50, help='lowbound')
+@click.option('--highbound', default=2000, help='highbound')
+def main(innerIter, lamda, sigma, kernelsize, lowbound, highbound):
     # Here we have to split the fully annotated dataset and unannotated dataset
-    # split_ratio = 0.05
+    split_ratio = 0.03
     random_index = np.random.permutation(len(train_set))
     labeled_dataset = copy.deepcopy(train_set)
     labeled_dataset.imgs = [train_set.imgs[x]
@@ -92,31 +96,23 @@ def main(split_ratio):
         labeled_dataset, batch_size=1, num_workers=num_workers, shuffle=True)
     unlabeled_dataLoader = DataLoader(
         unlabeled_dataset, batch_size=1, num_workers=num_workers, shuffle=True)
+    unlabeled_dataLoader.dataset.augmentation = False
 
     ##=====================================================================================================================#
 
     neural_net = Enet(2)
 
-    from utils.pretrain_network import pretrain
-
-    val_tables = pretrain(labeled_dataLoader, val_loader, neural_net, split_ratio=split_ratio)
-    pd.Series(val_tables).to_csv('split_ratio_%.3f.csv'%split_ratio)
-
-
-
-
-    '''
-
     map_location = lambda storage, loc: storage
 
     neural_net.load_state_dict(torch.load(
-        'checkpoint/pretrained_net.pth', map_location=map_location))
+        'checkpoint/model_0.6649_split_0.030.pth', map_location=map_location))
     neural_net.to(device)
     val_iou = val(val_loader, neural_net)
     val_iou_tables.append(val_iou)
 
     plt.ion()
-    net = networks(neural_net, lowerbound=50, upperbound=2000)
+    net = networks(neural_net, lowerbound=lowbound, upperbound=highbound, lamda=lamda, sigma=sigma,
+                   kernelsize=kernelsize)
     labeled_dataLoader_, unlabeled_dataLoader_ = iter(labeled_dataLoader), iter(unlabeled_dataLoader)
     for iteration in tqdm(range(50000)):
         # choose randomly a batch of image from labeled dataset and unlabeled dataset.
@@ -134,29 +130,29 @@ def main(split_ratio):
         except:
             labeled_dataLoader_ = iter(labeled_dataLoader)
             labeled_img, labeled_mask, labeled_weak_mask = next(labeled_dataLoader_)[0:3]
+
         labeled_img, labeled_mask, labeled_weak_mask = labeled_img.to(device), labeled_mask.to(
             device), labeled_weak_mask.to(device)
+
         try:
             unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
         except:
             unlabeled_dataLoader_ = iter(unlabeled_dataLoader)
             unlabeled_img, unlabeled_mask = next(unlabeled_dataLoader_)[0:2]
+
         unlabeled_img, unlabeled_mask = unlabeled_img.to(device), unlabeled_mask.to(device)
 
         # skip those with no foreground masks
         # if unlabeled_mask.sum() <= 500:  # or labeled_mask.sum() >= 1000:
         #     continue
 
-        for i in range(2):
+        for i in range(innerIter):
             net.update((labeled_img, labeled_mask),
                        (unlabeled_img, unlabeled_mask))
-            # net.show_ublabel_image()
             net.show_gamma()
             # net.show_u()
 
         net.reset()
-        
-        '''
 
 
 if __name__ == "__main__":

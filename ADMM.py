@@ -17,7 +17,7 @@ class networks(object):
     u,v: numpy of shape b h w
     '''
 
-    def __init__(self, neural_network, lowerbound, upperbound):
+    def __init__(self, neural_network, lowerbound, upperbound, lamda=1, sigma=0.02, kernelsize=7):
         super(networks, self).__init__()
         self.lowbound = lowerbound
         self.upbound = upperbound
@@ -27,9 +27,9 @@ class networks(object):
         self.CEloss_criterion = CrossEntropyLoss2d()
         self.p_u = 1.0
         self.p_v = 1.0
-        self.lamda = 8
-        self.sigma = 2
-        self.kernelsize = 7
+        self.lamda = lamda
+        self.sigma = sigma
+        self.kernelsize = kernelsize
         self.initial_kernel()
 
     def initial_kernel(self):
