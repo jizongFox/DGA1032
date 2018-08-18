@@ -1,4 +1,4 @@
-import torch
+import torch, os
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -20,7 +20,7 @@ def val(val_dataloader, network):
         image,mask = image.to(device),mask.to(device)
         proba = F.softmax(network(image),dim=1)
         predicted_mask = proba.max(1)[1]
-        iou = dice_loss(predicted_mask,mask).item()
+        iou = dice_loss(predicted_mask, mask).item()  ## this is the foreground iou loss
         dice_meter.add(iou)
     print('val iou:  %.8f'%dice_meter.value()[0])
     return dice_meter.value()[0]
@@ -30,7 +30,7 @@ def pretrain(train_dataloader, val_dataloader_,network, path=None):
     class config:
         lr = 5e-4
         epochs = 1000
-        path ='checkpoint/pretrained_net.pth'
+        path = 'checkpoint'
 
 
     pretrain_config = config()
@@ -61,5 +61,5 @@ def pretrain(train_dataloader, val_dataloader_,network, path=None):
         val_iou = val(val_dataloader_,network)
         if val_iou > highest_iou:
             highest_iou = val_iou
-            torch.save(network.state_dict(),pretrain_config.path)
+            torch.save(network.state_dict(), os.path.join(pretrain_config.path, 'model_%.4f.pth' % val_iou))
             print('pretrained model saved with %.4f.'%highest_iou)

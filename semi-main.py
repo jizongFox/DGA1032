@@ -86,24 +86,19 @@ def main():
     unlabeled_dataset = copy.deepcopy(train_set)
     unlabeled_dataset.imgs = [train_set.imgs[x]
                               for x in random_index[int(len(random_index) * split_ratio):]]
-    assert set(unlabeled_dataset.imgs) & set(
-        labeled_dataset.imgs) == set(), \
-        "there's intersection between labeled and unlabeled training set."
-
     labeled_dataLoader = DataLoader(
         labeled_dataset, batch_size=1, num_workers=num_workers, shuffle=True)
     unlabeled_dataLoader = DataLoader(
         unlabeled_dataset, batch_size=1, num_workers=num_workers, shuffle=True)
-    # Here we terminate the split of labeled and unlabeled data
-    # the validation set is for computing the dice loss.
 
-    ##
     ##=====================================================================================================================#
 
     neural_net = Enet(2)
 
-    # Uncomment the following line to pretrain the model with few fully labeled data.
-    # pretrain(labeled_dataLoader,val_loader,neural_net,)
+    from utils.pretrain_network import pretrain
+
+    pretrain(labeled_dataLoader, val_loader, neural_net)
+    '''
 
     map_location = lambda storage, loc: storage
 
@@ -111,7 +106,6 @@ def main():
         'checkpoint/pretrained_net.pth', map_location=map_location))
     neural_net.to(device)
     val_iou = val(val_loader, neural_net)
-    # print(val_iou)
     val_iou_tables.append(val_iou)
 
     plt.ion()
@@ -154,7 +148,11 @@ def main():
             # net.show_u()
 
         net.reset()
+        
+        '''
 
 
 if __name__ == "__main__":
+    np.random.seed(1)
+    torch.random.manual_seed(1)
     main()

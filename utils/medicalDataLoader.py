@@ -125,7 +125,7 @@ class MedicalImageDataset(Dataset):
             (w, h) = img.size
             (w_, h_) = mask.size
             assert (w==w_ and h==h_),'The size should be the same.'
-            crop = random.uniform(0.65, 0.95)
+            crop = random.uniform(0.75, 0.95)
             W = int(crop * w)
             H = int(crop * h)
             start_x = w - W
