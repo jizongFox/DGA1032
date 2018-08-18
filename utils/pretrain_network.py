@@ -25,11 +25,12 @@ def val(val_dataloader, network):
     print('val iou:  %.8f'%dice_meter.value()[0])
     return dice_meter.value()[0]
 
-def pretrain(train_dataloader, val_dataloader_,network, path=None):
+
+def pretrain(train_dataloader, val_dataloader_, network, path=None, split_ratio=0.1):
     highest_iou = -1
     class config:
-        lr = 5e-4
-        epochs = 1000
+        lr = 1e-4
+        epochs = 100
         path = 'checkpoint'
 
 
@@ -40,6 +41,8 @@ def pretrain(train_dataloader, val_dataloader_,network, path=None):
     criterion_ = CrossEntropyLoss2d()
     optimiser_ = torch.optim.Adam(network.parameters(),pretrain_config.lr)
     loss_meter = AverageValueMeter()
+    fiou_tables = []
+
     for iteration in range(pretrain_config.epochs):
         loss_meter.reset()
 
@@ -59,7 +62,10 @@ def pretrain(train_dataloader, val_dataloader_,network, path=None):
                 print('learning rate:', param_group['lr'])
 
         val_iou = val(val_dataloader_,network)
+        fiou_tables.append(val_iou)
         if val_iou > highest_iou:
             highest_iou = val_iou
-            torch.save(network.state_dict(), os.path.join(pretrain_config.path, 'model_%.4f.pth' % val_iou))
+            torch.save(network.state_dict(),
+                       os.path.join(pretrain_config.path, 'model_%.4f_split_%.3f.pth' % (val_iou, split_ratio)))
             print('pretrained model saved with %.4f.'%highest_iou)
+    return fiou_tables

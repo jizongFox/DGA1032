@@ -77,10 +77,10 @@ def val(val_dataloader, network):
 
 
 @click.command()
-@click.option()
-def main():
+@click.option('--split_ratio', default=0.05)
+def main(split_ratio):
     # Here we have to split the fully annotated dataset and unannotated dataset
-    split_ratio = 0.05
+    # split_ratio = 0.05
     random_index = np.random.permutation(len(train_set))
     labeled_dataset = copy.deepcopy(train_set)
     labeled_dataset.imgs = [train_set.imgs[x]
