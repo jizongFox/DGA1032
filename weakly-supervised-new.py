@@ -38,7 +38,7 @@ batch_size = 8
 batch_size_val = 1
 num_workers = 8
 
-max_epoch = 100
+max_epoch = 300
 data_dir = 'dataset/ACDC-2D-All'
 
 color_transform = Colorize()
@@ -107,7 +107,8 @@ def main(lr, b_weight, visualize):
         val_iou_table.append(val_iou)
         print(epoch, ': ', ' lr:', float(lr), ' bw:', b_weight, '  :', val_iou)
         try:
-            pd.DataFrame(val_iou_table,columns=['foreground', 'mean_dice']).to_csv('iou.csv')
+            pd.DataFrame(val_iou_table, columns=['foreground', 'mean_dice']).to_csv(
+                'results/lr_%.6f_w_%.4f_iou.csv' % (float(lr), float(b_weight)))
         except Exception as e:
             print(e)
         images_to_visualize = []
