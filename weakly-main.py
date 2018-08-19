@@ -107,8 +107,5 @@ def main():
             net.reset()
 
 
-
-
-
 if __name__ == "__main__":
     main()
