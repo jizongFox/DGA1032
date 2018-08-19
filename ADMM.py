@@ -71,7 +71,7 @@ class networks(object):
         self.neural_net.zero_grad()
 
         for i in range(5):
-            CE_loss = self.CEloss_criterion(self.image_output, self.weak_mask.squeeze(1))
+            CE_loss = self.CEloss_criterion(self.image_output, self.weak_mask.squeeze(1).long())
             unlabled_loss = self.p_v /2 *(F.softmax(self.image_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().to(device)).norm(p=2) ** 2\
                 +self.p_u / 2 * (F.softmax(self.image_output, dim=1)[:, 1] + torch.from_numpy(-self.gamma+self.u).float().to(device)).norm(p=2) ** 2
 
