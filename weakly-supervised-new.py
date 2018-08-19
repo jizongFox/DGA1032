@@ -28,15 +28,15 @@ import click
 torch.manual_seed(7)
 np.random.seed(2)
 
-trainBoard = Dashboard(server='http://localhost', env='train')
-valBoard = Dashboard(server='http://localhost', env='val')
+trainBoard = Dashboard(server='http://pascal.livia.etsmtl.ca', env='train')
+valBoard = Dashboard(server='http://pascal.livia.etsmtl.ca', env='val')
 
 use_gpu = True
 device = torch.device("cuda") if torch.cuda.is_available() and use_gpu else torch.device("cpu")
 
-batch_size = 4
+batch_size = 8
 batch_size_val = 1
-num_workers = 4
+num_workers = 8
 
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'
@@ -59,7 +59,7 @@ val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=trans
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
 
 
-def val(val_dataloader, network):
+def val(val_dataloader, network, epoch):
     network.eval()
     with torch.no_grad():
         foreground_dice_meter = AverageValueMeter()
@@ -78,12 +78,12 @@ def val(val_dataloader, network):
             if images_to_visualize.__len__() < 16:
                 images_to_visualize.append(torch.cat((image, proba[:, 1:], mask.float()), 1))
         valBoard.vis.images(torch.cat(images_to_visualize, 0), nrow=4,
-                            opts={'title': 'mean iou:%.3f' % mean_dice_meter.value()[0]})
+                            opts={'title': 'epoch:%d, mean iou:%.3f, fore iou:%.3f' %(epoch,mean_dice_meter.value()[0], foreground_dice_meter.value()[0])})
 
     network.train()
     print('foreground val iou:  %.6f' % foreground_dice_meter.value()[0],
           '\t mean val iou:  %.6f' % mean_dice_meter.value()[0])
-    return foreground_dice_meter.value()[0]
+    return [foreground_dice_meter.value()[0], mean_dice_meter.value()[0]]
 
 
 @click.command()
@@ -95,9 +95,19 @@ def main(lr, b_weight):
     weight = [float(b_weight), 1]
     criterion = CrossEntropyLoss2d(torch.Tensor(weight)).to(device)
     optimiser = torch.optim.Adam(neural_net.parameters(), lr=lr, weight_decay=1e-5)
+    val_iou_table = []
 
     plt.ion()
     for epoch in range(max_epoch):
+        val_iou = val(val_loader, neural_net, epoch)
+        val_iou_table.append(val_iou)
+        print(epoch, ': ', ' lr:', float(lr), ' bw:', b_weight, '  :', val_iou)
+        try:
+            pd.DataFrame(val_iou_table,columns=['foreground', 'mean_dice']).to_csv('iou.csv')
+        except Exception as e:
+            print(e)
+        images_to_visualize = []
+
         for i, (img, full_mask, weak_mask, _) in tqdm(enumerate(train_loader)):
             if weak_mask.sum() <= 0 or full_mask.sum() <= 0:
                 continue
@@ -109,8 +119,13 @@ def main(lr, b_weight):
             loss.backward()
             optimiser.step()
 
-        val_iou = val(val_loader, neural_net)
-        print(epoch, ': ', ' lr:', float(lr), ' bw:', b_weight, '  :', val_iou)
+            if images_to_visualize.__len__() < 16:
+                images_to_visualize.append(torch.cat((img[:1], F.softmax(score,dim=1)[:1, 1:], full_mask[:1].float()), 1))
+        try:
+            trainBoard.vis.images(torch.cat(images_to_visualize, 0), nrow=4, opts={'title':'epoch:%d,'%epoch})
+        except Exception as e:
+            print(e)
+
 
 
 
