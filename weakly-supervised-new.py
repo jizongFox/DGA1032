@@ -87,7 +87,7 @@ def val(val_dataloader, network, epoch):
 
 
 @click.command()
-@click.option('--lr', default=1e-4, help='learning rate, default 1e-5')
+@click.option('--lr', default=1e-3, help='learning rate, default 1e-5')
 @click.option('--b_weight', default=1e-3, help='background weigth when foreground setting to be 1')
 def main(lr, b_weight):
     neural_net = Enet(2)
