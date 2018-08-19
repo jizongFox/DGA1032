@@ -248,7 +248,7 @@ class networks(object):
         plt.subplot(1, 1, 1)
         plt.imshow(self.image[0].cpu().data.numpy().squeeze(), cmap='gray')
         # plt.imshow(self.gamma[0])
-        plt.contour(self.weak_mask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=0.2, linewidth=0.001,label = 'GT')
+        plt.contour(self.weak_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,label = 'GT')
         plt.contour(self.full_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,label = 'GT')
 
         plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001,label = 'graphcut')

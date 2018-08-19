@@ -134,6 +134,7 @@ class MedicalImageDataset(Dataset):
             y_pos = int(random.uniform(0, start_y))
             img = img.crop((x_pos, y_pos, x_pos + W, y_pos + H))
             mask = mask.crop((x_pos, y_pos, x_pos + W, y_pos + H))
+            weak_mask = weak_mask.crop((x_pos, y_pos, x_pos + W, y_pos + H))
 
         return img, mask, weak_mask
 
