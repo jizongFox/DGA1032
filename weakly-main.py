@@ -35,7 +35,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
 batch_size = 1
 batch_size_val = 1
-num_workers = 4
+num_workers = 1
 lr = 0.001
 max_epoch = 100
 data_dir = 'dataset/ACDC-2D-All'

@@ -24,14 +24,14 @@ class networks(object):
         self.upbound = upperbound
         self.neural_net = neural_network
         self.reset()
-        self.optimiser = torch.optim.Adam(self.neural_net.parameters(), lr=0.001)
+        self.optimiser = torch.optim.Adam(self.neural_net.parameters(), lr=0.005)
         self.CEloss_criterion = CrossEntropyLoss2d(torch.Tensor([0,1]).float()).to(device)
         self.p_u = 1.0
         self.p_v = 1.0
         self.lamda = 1
         # self.set_bound=False
         self.sigma = .02
-        self.kernelsize=7
+        self.kernelsize = 5
         self.initial_kernel()
 
 
@@ -81,7 +81,7 @@ class networks(object):
             self.optimiser.zero_grad()
             loss.backward()
             self.optimiser.step()
-            print('loss:', loss.item())
+            # print('loss:', loss.item())
 
             self.image_forward(self.image, self.weak_mask)
 
@@ -176,6 +176,16 @@ class networks(object):
         self.u = new_u
         pass
 
+    def update_v(self):
+
+        # new_u = self.u + (F.softmax(self.uimage_output, dim=1)[:, 1, :, :].cpu().data.numpy() - self.gamma)
+        new_v = self.v + (self.heatmap2segmentation(self.image_output).cpu().data.numpy() - self.s) * 0.01
+        # assert new_u.shape == self.u.shape
+        self.v = new_v
+        pass
+
+
+
     def update(self, image_pair,full_mask):
         [image,weak_mask] =image_pair
         self.full_mask = full_mask
@@ -185,6 +195,7 @@ class networks(object):
 
         self.update_theta()
         self.update_u()
+        self.update_v()
 
     def show_ublabel_image(self):
         fig = plt.figure(2, figsize=(8, 8))
@@ -240,9 +251,6 @@ class networks(object):
         plt.contour(self.weak_mask.squeeze().cpu().data.numpy(), level=[0], colors="black", alpha=0.2, linewidth=0.001,label = 'GT')
         plt.contour(self.full_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,label = 'GT')
 
-
-
-
         plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001,label = 'graphcut')
         plt.contour(self.s.squeeze(),level=[0],colors='blue',alpha = 0.2, linewidth = 0.001, label='size_constraint')
         plt.contour(self.heatmap2segmentation(self.image_output).squeeze().cpu().data.numpy(), level=[0],
@@ -250,7 +258,7 @@ class networks(object):
         plt.title('Gamma')
         # figManager = plt.get_current_fig_manager()
         # figManager.window.showMaximized()
-        plt.legend()
+        # plt.legend()
         plt.show(block=False)
         plt.pause(0.01)
 
