@@ -149,7 +149,7 @@ def main(kernel_size, lamda, sigma, saved_name):
         unlabeled_prediction = F.softmax(unlabeled_score, dim=1)
         graphcut_output = graphcut_refinement(unlabeled_prediction[:, 1], unlabeled_img, kernel_size=kernel_size,
                                               lamda=lamda, sigma=sigma)
-        unlabeled_loss = citerion(unlabeled_score, graphcut_output)
+        unlabeled_loss = citerion(unlabeled_score, graphcut_output.to(device))
         optimizer.zero_grad()
         loss = labeled_loss + unlabeled_loss
         loss.backward()
