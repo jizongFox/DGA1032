@@ -1,4 +1,4 @@
-import kaggle,os,subprocess
+import os,subprocess
 
 project_root_path = os.path.dirname(os.getcwd())
 if not os.path.isdir(os.path.join(project_root_path,'dataset')):
