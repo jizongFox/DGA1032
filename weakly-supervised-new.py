@@ -59,7 +59,7 @@ val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=trans
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
 
 
-def val(val_dataloader, network, epoch):
+def val(val_dataloader, network, epoch, visualize):
     network.eval()
     with torch.no_grad():
         foreground_dice_meter = AverageValueMeter()
@@ -75,10 +75,13 @@ def val(val_dataloader, network, epoch):
             mean_dice_meter.add(np.mean(iou))
             foreground_dice_meter.add(iou[1])
 
-            if images_to_visualize.__len__() < 16:
+            if visualize and images_to_visualize.__len__() < 16:
                 images_to_visualize.append(torch.cat((image, proba[:, 1:], mask.float()), 1))
-        valBoard.vis.images(torch.cat(images_to_visualize, 0), nrow=4,
-                            opts={'title': 'epoch:%d, mean iou:%.3f, fore iou:%.3f' %(epoch,mean_dice_meter.value()[0], foreground_dice_meter.value()[0])})
+
+        if visualize:
+            valBoard.vis.images(torch.cat(images_to_visualize, 0), nrow=4,
+                                opts={'title': 'epoch:%d, mean iou:%.3f, fore iou:%.3f' % (
+                                epoch, mean_dice_meter.value()[0], foreground_dice_meter.value()[0])})
 
     network.train()
     print('foreground val iou:  %.6f' % foreground_dice_meter.value()[0],
@@ -89,7 +92,8 @@ def val(val_dataloader, network, epoch):
 @click.command()
 @click.option('--lr', default=1e-3, help='learning rate, default 1e-5')
 @click.option('--b_weight', default=1e-3, help='background weigth when foreground setting to be 1')
-def main(lr, b_weight):
+@click.option('--visualize', default=False)
+def main(lr, b_weight, visualize):
     neural_net = Enet(2)
     neural_net.to(device)
     weight = [float(b_weight), 1]
@@ -99,7 +103,7 @@ def main(lr, b_weight):
 
     plt.ion()
     for epoch in range(max_epoch):
-        val_iou = val(val_loader, neural_net, epoch)
+        val_iou = val(val_loader, neural_net, epoch, visualize)
         val_iou_table.append(val_iou)
         print(epoch, ': ', ' lr:', float(lr), ' bw:', b_weight, '  :', val_iou)
         try:
@@ -119,12 +123,13 @@ def main(lr, b_weight):
             loss.backward()
             optimiser.step()
 
-            if images_to_visualize.__len__() < 16:
+            if visualize and images_to_visualize.__len__() < 16:
                 images_to_visualize.append(torch.cat((img[:1], F.softmax(score,dim=1)[:1, 1:], full_mask[:1].float()), 1))
-        try:
-            trainBoard.vis.images(torch.cat(images_to_visualize, 0), nrow=4, opts={'title':'epoch:%d,'%epoch})
-        except Exception as e:
-            print(e)
+        if visualize:
+            try:
+                trainBoard.vis.images(torch.cat(images_to_visualize, 0), nrow=4, opts={'title': 'epoch:%d,' % epoch})
+            except Exception as e:
+                print(e)
 
 
 
