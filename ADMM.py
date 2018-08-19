@@ -6,9 +6,11 @@ import torch.nn.functional as F
 
 from utils.network import UNet
 from utils.criterion import CrossEntropyLoss2d
+
 use_gpu = True
 # device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
 device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torch.device('cpu')
+
 
 class networks(object):
     '''
@@ -25,20 +27,18 @@ class networks(object):
         self.neural_net = neural_network
         self.reset()
         self.optimiser = torch.optim.Adam(self.neural_net.parameters(), lr=0.005)
-        self.CEloss_criterion = CrossEntropyLoss2d(torch.Tensor([0,1]).float()).to(device)
+        self.CEloss_criterion = CrossEntropyLoss2d(torch.Tensor([0, 1]).float()).to(device)
         self.p_u = 1.0
         self.p_v = 1.0
-        self.lamda = 1
+        self.lamda = 0.1
         # self.set_bound=False
         self.sigma = .02
         self.kernelsize = 5
         self.initial_kernel()
 
-
     def initial_kernel(self):
-        self.kernel = np.ones((self.kernelsize,self.kernelsize))
-        self.kernel[int(self.kernel.shape[0]/2),int(self.kernel.shape[1]/2)]=0
-
+        self.kernel = np.ones((self.kernelsize, self.kernelsize))
+        self.kernel[int(self.kernel.shape[0] / 2), int(self.kernel.shape[1] / 2)] = 0
 
     def image_forward(self, image, weak_mask):
         self.weak_mask = weak_mask
@@ -72,12 +72,15 @@ class networks(object):
 
         for i in range(5):
             CE_loss = self.CEloss_criterion(self.image_output, self.weak_mask.squeeze(1).long())
-            unlabled_loss = self.p_v /2 *(F.softmax(self.image_output,dim=1)[:,1] + torch.from_numpy(-self.s+self.v).float().to(device)).norm(p=2) ** 2\
-                +self.p_u / 2 * (F.softmax(self.image_output, dim=1)[:, 1] + torch.from_numpy(-self.gamma+self.u).float().to(device)).norm(p=2) ** 2
+            unlabled_loss = self.p_v / 2 * (
+                        F.softmax(self.image_output, dim=1)[:, 1] + torch.from_numpy(-self.s + self.v).float().to(
+                    device)).norm(p=2) ** 2 \
+                            + self.p_u / 2 * (F.softmax(self.image_output, dim=1)[:, 1] + torch.from_numpy(
+                -self.gamma + self.u).float().to(device)).norm(p=2) ** 2
 
-            unlabled_loss /=list(self.image_output.reshape(-1).size())[0]
+            unlabled_loss /= list(self.image_output.reshape(-1).size())[0]
 
-            loss = CE_loss + 5*unlabled_loss
+            loss = CE_loss + unlabled_loss
             self.optimiser.zero_grad()
             loss.backward()
             self.optimiser.step()
@@ -87,11 +90,11 @@ class networks(object):
 
     def set_boundary_term(self, g, nodeids, img, lumda, sigma):
         kernel = self.kernel
-        transfer_function = lambda pixel_difference: lumda * np.exp((-1 / sigma**2) * pixel_difference**2)
+        transfer_function = lambda pixel_difference: lumda * np.exp((-1 / sigma ** 2) * pixel_difference ** 2)
 
         img = img.squeeze().cpu().data.numpy()
 
-# =====new =========================================
+        # =====new =========================================
         padding_size = int(max(kernel.shape) / 2)
         position = np.array(list(zip(*np.where(kernel != 0))))
 
@@ -109,10 +112,10 @@ class networks(object):
             pad_im = np.pad(img, ((padding_size, padding_size), (padding_size, padding_size)), 'constant',
                             constant_values=0)
             shifted_im = shift_matrix(pad_im, structure)
-            weights_ = transfer_function(np.abs(pad_im - shifted_im)[padding_size:-padding_size, padding_size:-padding_size])
+            weights_ = transfer_function(
+                np.abs(pad_im - shifted_im)[padding_size:-padding_size, padding_size:-padding_size])
 
             g.add_grid_edges(nodeids, structure=structure, weights=weights_, symmetric=False)
-
 
         return g
 
@@ -122,12 +125,12 @@ class networks(object):
             (0.5 - (F.softmax(self.image_output, dim=1).cpu().data.numpy()[:, 1, :, :] + self.u)),
             1)
         # unary_term_gamma_1 = np.ones(unary_term_gamma_1.shape)
-        unary_term_gamma_1 [(self.weak_mask.squeeze(dim=1).cpu().data.numpy()==1).astype(bool)]= -np.inf
+        unary_term_gamma_1[(self.weak_mask.squeeze(dim=1).cpu().data.numpy() == 1).astype(bool)] = -np.inf
 
         unary_term_gamma_1[0][0:20] = np.inf
         unary_term_gamma_1[0][-20:-1] = np.inf
-        unary_term_gamma_1[0][:,0:20] = np.inf
-        unary_term_gamma_1[0][:,-20:-1] = np.inf
+        unary_term_gamma_1[0][:, 0:20] = np.inf
+        unary_term_gamma_1[0][:, -20:-1] = np.inf
 
         unary_term_gamma_0 = np.zeros(unary_term_gamma_1.shape)
         new_gamma = np.zeros(self.gamma.shape)
@@ -150,28 +153,27 @@ class networks(object):
         # The labels should be 1 where sgm is False and 0 otherwise.
         new_gamma[i] = np.int_(np.logical_not(sgm))
         # g.reset()
-        if new_gamma.sum()>0:
+        if new_gamma.sum() > 0:
             self.gamma = new_gamma
         else:
             self.gamma = self.s
 
-
     def update_s(self):
-        a = 0.5 - (F.softmax(self.image_output,1)[:,1].cpu().data.numpy().squeeze() + self.v)
+        a = 0.5 - (F.softmax(self.image_output, 1)[:, 1].cpu().data.numpy().squeeze() + self.v)
         original_shape = a.shape
         a_ = np.sort(a.ravel())
-        useful_pixel_number = (a<0).sum()
-        if self.lowbound< useful_pixel_number and self.upbound > useful_pixel_number:
-            self.s = ((a<0)*1.0).reshape(original_shape)
+        useful_pixel_number = (a < 0).sum()
+        if self.lowbound < useful_pixel_number and self.upbound > useful_pixel_number:
+            self.s = ((a < 0) * 1.0).reshape(original_shape)
         if useful_pixel_number < self.lowbound:
-            self.s = ((a<=a_[self.lowbound])*1).reshape(original_shape)
+            self.s = ((a <= a_[self.lowbound]) * 1).reshape(original_shape)
         if useful_pixel_number > self.upbound:
-            self.s = ((a<=a_[self.upbound])*1).reshape(original_shape)
+            self.s = ((a <= a_[self.upbound]) * 1).reshape(original_shape)
 
     def update_u(self):
 
         # new_u = self.u + (F.softmax(self.uimage_output, dim=1)[:, 1, :, :].cpu().data.numpy() - self.gamma)
-        new_u = self.u + (self.heatmap2segmentation(self.image_output).cpu().data.numpy() - self.gamma)*0.01
+        new_u = self.u + (self.heatmap2segmentation(self.image_output).cpu().data.numpy() - self.gamma) * 0.01
         # assert new_u.shape == self.u.shape
         self.u = new_u
         pass
@@ -184,10 +186,8 @@ class networks(object):
         self.v = new_v
         pass
 
-
-
-    def update(self, image_pair,full_mask):
-        [image,weak_mask] =image_pair
+    def update(self, image_pair, full_mask):
+        [image, weak_mask] = image_pair
         self.full_mask = full_mask
         self.image_forward(image, weak_mask)
         self.update_s()
@@ -213,7 +213,7 @@ class networks(object):
         ax2.imshow(F.softmax(self.image_output, dim=1)[0][1].cpu().data.numpy(), vmin=0, vmax=1, cmap='gray')
         # ax2.contour(F.softmax(self.uimage_output, dim=1)[0][1].cpu().data.numpy(),level=(0.5,0.5),colors="red",alpha=0.5)
         ax2.title.set_text('probability prediction')
-        ax2.text(0,0,'%.3f'%F.softmax(self.image_output, dim=1)[0][1].cpu().data.numpy().max())
+        ax2.text(0, 0, '%.3f' % F.softmax(self.image_output, dim=1)[0][1].cpu().data.numpy().max())
         # ax2.set_cl)
         ax2.set_axis_off()
 
@@ -248,11 +248,13 @@ class networks(object):
         plt.subplot(1, 1, 1)
         plt.imshow(self.image[0].cpu().data.numpy().squeeze(), cmap='gray')
         # plt.imshow(self.gamma[0])
-        plt.contour(self.weak_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,label = 'GT')
-        plt.contour(self.full_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,label = 'GT')
+        plt.contour(self.weak_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,
+                    label='GT')
+        plt.contour(self.full_mask.squeeze().cpu().data.numpy(), level=[0], colors="yellow", alpha=0.2, linewidth=0.001,
+                    label='GT')
 
-        plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001,label = 'graphcut')
-        plt.contour(self.s.squeeze(),level=[0],colors='blue',alpha = 0.2, linewidth = 0.001, label='size_constraint')
+        plt.contour(self.gamma[0], level=[0], colors="red", alpha=0.2, linewidth=0.001, label='graphcut')
+        plt.contour(self.s.squeeze(), level=[0], colors='blue', alpha=0.2, linewidth=0.001, label='size_constraint')
         plt.contour(self.heatmap2segmentation(self.image_output).squeeze().cpu().data.numpy(), level=[0],
                     colors="green", alpha=0.2, linewidth=0.001, label='CNN')
         plt.title('Gamma')

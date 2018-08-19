@@ -23,8 +23,8 @@ from utils.utils import Colorize, dice_loss
 from torchnet.meter import AverageValueMeter
 from tqdm import tqdm
 
-torch.manual_seed(7)
-np.random.seed(2)
+torch.manual_seed(1)
+np.random.seed(1)
 
 use_gpu = True
 # device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
@@ -69,8 +69,8 @@ def val(val_dataloader, network):
     dice_meter = AverageValueMeter()
     dice_meter.reset()
     for i, (image, mask, _, _) in enumerate(val_dataloader):
-        # if mask.sum()<=500:
-        #     continue
+        if mask.sum()<=0:
+            continue
         image, mask = image.to(device), mask.to(device)
         proba = F.softmax(network(image), dim=1)
         predicted_mask = proba.max(1)[1]
@@ -87,23 +87,27 @@ def main():
     net = networks(neural_net, lowerbound=50, upperbound=2000)
     plt.ion()
     for epoch in tqdm(range(max_epoch)):
+        val_iou = val(val_loader, net.neural_net)
+        val_iou_tables.append(val_iou)
+        try:
+            pd.Series(val_iou_tables).to_csv('iou.csv')
+        except Exception as e:
+            print(e)
+
+
         for i, (img, full_mask, weak_mask, _) in tqdm(enumerate(train_loader)):
             if weak_mask.sum() <= 0 or full_mask.sum() <= 0:
                 continue
             img, full_mask, weak_mask = img.to(device), full_mask.to(device), weak_mask.to(device)
 
-            for j in range(10):
+            for j in range(5):
                 net.update((img,weak_mask),full_mask)
-                net.show_gamma()
+                if j ==4:
+                    net.show_gamma()
             net.reset()
-        val(net.neural_net, val_loader)
 
-        # choose randomly a batch of image from labeled dataset and unlabeled dataset.
-        # Initialize the ADMM dummy variables for one-batch training
 
-        # if (iteration + 1) % 100 == 0:
-        #     val_iou = val(val_loader, net.neural_net)
-        #     val_iou_tables.append(val_iou)
+
 
 
 
