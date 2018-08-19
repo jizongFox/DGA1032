@@ -56,7 +56,6 @@ class Colorize:
         for label in range(1, len(self.cmap)):
             mask = gray_image.squeeze() == label
             try:
-
                 color_image[0][mask] = self.cmap[label][0]
                 color_image[1][mask] = self.cmap[label][1]
                 color_image[2][mask] = self.cmap[label][2]

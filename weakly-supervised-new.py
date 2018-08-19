@@ -72,21 +72,6 @@ def val(val_dataloader, network):
         predicted_mask = proba.max(1)[1]
         iou = dice_loss(predicted_mask, mask)
         dice_meter.add(np.mean(iou))
-        if i ==0:
-            plt.figure(2)
-            plt.subplot(221)
-            plt.imshow(image[0].cpu().data.numpy().squeeze(),cmap = 'gray')
-
-            plt.subplot(222)
-            plt.imshow(proba[0][1].cpu().data.numpy().squeeze(), cmap = 'gray')
-
-            plt.subplot(223)
-            plt.imshow(predicted_mask[0].cpu().data.numpy().squeeze(), cmap = 'gray')
-
-            plt.subplot(224)
-            plt.imshow(mask[0].cpu().data.numpy().squeeze(), cmap = 'gray')
-            plt.show()
-            plt.pause(0.5)
 
     network.train()
     print('val iou:  %.6f' % dice_meter.value()[0])

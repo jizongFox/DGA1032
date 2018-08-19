@@ -8,6 +8,6 @@ if not os.path.isdir(os.path.join(project_root_path, 'checkpoint')):
 if not os.path.isdir(os.path.join(project_root_path, 'results')):
     os.mkdir(os.path.join(project_root_path, 'results'))
 cmd_ = '"cp kaggle.json ~/.kaggle/ && chmod 600 ~/.kaggle/kaggle.json"'
-os.system('/bin/zsh -c ' + cmd_)
+os.system('/bin/bash -c ' + cmd_)
 cmd = '"kaggle datasets download -d jizongpeng/acdc2dall --force -p %s"'%os.path.join(project_root_path,'dataset')
-os.system('/bin/zsh -c '+ cmd)
+os.system('/bin/bash -c '+ cmd)
