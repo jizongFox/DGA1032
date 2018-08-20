@@ -30,9 +30,6 @@ use_gpu = True
 # device = "cuda" if torch.cuda.is_available() and use_gpu else "cpu"
 device = torch.device('cuda') if torch.cuda.is_available() and use_gpu else torch.device('cpu')
 
-cuda_device = "0"
-os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
-
 batch_size = 1
 batch_size_val = 1
 num_workers = 1
