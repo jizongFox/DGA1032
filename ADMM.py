@@ -3,6 +3,7 @@ import maxflow
 import numpy as np
 import torch
 import torch.nn.functional as F
+import cv2
 
 from utils.network import UNet
 from utils.criterion import CrossEntropyLoss2d
@@ -70,7 +71,7 @@ class networks(object):
 
         self.neural_net.zero_grad()
 
-        for i in range(5):
+        for i in range(500):
             CE_loss = self.CEloss_criterion(self.image_output, self.weak_mask.squeeze(1).long())
             unlabled_loss = self.p_v / 2 * (
                         F.softmax(self.image_output, dim=1)[:, 1] + torch.from_numpy(-self.s + self.v).float().to(
@@ -85,6 +86,18 @@ class networks(object):
             loss.backward()
             self.optimiser.step()
             # print('loss:', loss.item())
+            plt.figure(2)
+            plt.clf()
+            plt.imshow(np.abs((F.softmax(self.image_output, dim=1)[:, 1].data.numpy()-self.gamma).squeeze()),cmap='gray')
+            plt.colorbar()
+            plt.show()
+
+            plt.figure(1)
+            plt.clf()
+            plt.imshow(F.softmax(self.image_output, 1)[0, 1].data.squeeze().numpy(),cmap='gray')
+            plt.colorbar()
+            plt.show()
+            plt.pause(0.01)
 
             self.image_forward(self.image, self.weak_mask)
 
@@ -124,13 +137,22 @@ class networks(object):
         unary_term_gamma_1 = np.multiply(
             (0.5 - (F.softmax(self.image_output, dim=1).cpu().data.numpy()[:, 1, :, :] + self.u)),
             1)
-        # unary_term_gamma_1 = np.ones(unary_term_gamma_1.shape)
         unary_term_gamma_1[(self.weak_mask.squeeze(dim=1).cpu().data.numpy() == 1).astype(bool)] = -np.inf
 
         unary_term_gamma_1[0][0:20] = np.inf
         unary_term_gamma_1[0][-20:-1] = np.inf
         unary_term_gamma_1[0][:, 0:20] = np.inf
         unary_term_gamma_1[0][:, -20:-1] = np.inf
+
+        weak_mask = self.weak_mask.squeeze().numpy()
+        assert len(weak_mask.shape)==2
+        kernel = np.ones((5, 5), np.uint8)
+        dilation = cv2.dilate(weak_mask.astype(np.float32),kernel, iterations=4)
+        unary_term_gamma_1[0][dilation!=1]=np.inf
+
+
+        # unary_term_gamma_0 = np.zeros(unary_term_gamma_1.shape)
+        # unary_term_gamma_0[0][dilation!=1]=-np.inf
 
         unary_term_gamma_0 = np.zeros(unary_term_gamma_1.shape)
         new_gamma = np.zeros(self.gamma.shape)

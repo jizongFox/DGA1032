@@ -154,9 +154,10 @@ class MedicalImageDataset(Dataset):
         if self.transform:
             img = self.transform(img)
             mask = self.mask_transform(mask)
-            mask = (mask == 1).long()
+            mask = (mask >0.8).long()
             # mask = self.mask_pixelvalue2OneHot(mask)
             mask_weak = self.mask_transform(mask_weak)
+            mask_weak = (mask_weak>0.8).long()
 
         return [img, mask, mask_weak, img_path]
 

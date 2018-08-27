@@ -59,7 +59,8 @@ val_set = medicalDataLoader.MedicalImageDataset('val', data_dir, transform=trans
 
 val_loader = DataLoader(val_set, batch_size=batch_size_val, num_workers=num_workers, shuffle=True)
 val_iou_tables = []
-
+np.random.seed(1)
+torch.random.manual_seed(1)
 
 def val(val_dataloader, network):
     network.eval()
@@ -84,8 +85,7 @@ def main():
     net = networks(neural_net, lowerbound=50, upperbound=2000)
     plt.ion()
     for epoch in tqdm(range(max_epoch)):
-        val_iou = val(val_loader, net.neural_net)
-        val_iou_tables.append(val_iou)
+
         try:
             pd.Series(val_iou_tables).to_csv('iou.csv')
         except Exception as e:
@@ -99,8 +99,7 @@ def main():
 
             for j in range(5):
                 net.update((img,weak_mask),full_mask)
-                if j ==4:
-                    net.show_gamma()
+                net.show_gamma()
             net.reset()
 
 
